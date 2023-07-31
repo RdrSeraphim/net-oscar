@@ -4,12 +4,12 @@
 # so we test loading them all here.
 
 eval {
-	require Test::More;
-	Test::More->import();
+    require Test::More;
+    Test::More->import();
 };
-if($@) {
-	print "1..0 # Skipped: Couldn't load Test::More\n";
-	exit 0;
+if ($@) {
+    print "1..0 # Skipped: Couldn't load Test::More\n";
+    exit 0;
 }
 
 use strict;
@@ -17,37 +17,38 @@ use warnings;
 use lib "./blib/lib";
 
 sub getfiles {
-	my $dir = shift;
-	my @ret;
+    my $dir = shift;
+    my @ret;
 
-	opendir(DIR, $dir) or die "Couldn't open test directory $dir: $!\n";
-	my @files = readdir(DIR);
-	closedir(DIR);
+    opendir( DIR, $dir ) or die "Couldn't open test directory $dir: $!\n";
+    my @files = readdir(DIR);
+    closedir(DIR);
 
-	foreach my $file(@files) {
-		next if $file eq "." or $file eq "..";
+    foreach my $file (@files) {
+        next if $file eq "." or $file eq "..";
 
-		my $path = "$dir/$file";
-		if(-d $path) {
-			push @ret, getfiles($path);
-		} elsif($path =~ /\.pm$/) {
-			push @ret, $path;
-		}
-	}
+        my $path = "$dir/$file";
+        if ( -d $path ) {
+            push @ret, getfiles($path);
+        }
+        elsif ( $path =~ /\.pm$/ ) {
+            push @ret, $path;
+        }
+    }
 
-	return @ret;
+    return @ret;
 }
 
 my @tests = getfiles("./blib/lib/Net/OSCAR/Callbacks");
-plan(tests => scalar(@tests) + 2);
+plan( tests => scalar(@tests) + 2 );
 
 require_ok("Net::OSCAR");
 require_ok("Net::OSCAR::Constants");
 
-foreach my $file(@tests) {
-	next if $file eq "." or $file eq "..";
-	ok(do($file), "callback load: $file");
-	diag($@) if $@;
+foreach my $file (@tests) {
+    next if $file eq "." or $file eq "..";
+    ok( do($file), "callback load: $file" );
+    diag($@) if $@;
 }
 
 1;

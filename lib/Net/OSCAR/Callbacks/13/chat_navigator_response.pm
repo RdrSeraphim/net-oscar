@@ -4,24 +4,30 @@ use warnings;
 use vars qw($connection $snac $conntype $family $subtype $data $reqid $reqdata $session $protobit %data);
 sub {
 
-return if exists($data{exchange}); # This was a rights request
+    return if exists( $data{exchange} );    # This was a rights request
 
-foreach my $room (@{$data{room}}) {
-	# Generate a random request ID
-	my($reqid) = "";
-	$reqid = pack("n", 4);
-	$reqid .= randchars(2);
-	($reqid) = unpack("N", $reqid);
+    foreach my $room ( @{ $data{room} } ) {
 
-	$session->{chats}->{$reqid} = $room;
+        # Generate a random request ID
+        my ($reqid) = "";
+        $reqid = pack( "n", 4 );
+        $reqid .= randchars(2);
+        ($reqid) = unpack( "N", $reqid );
 
-	$session->svcdo(CONNTYPE_BOS, protobit => "service_request", reqid => $reqid, protodata => {
-		type => CONNTYPE_CHAT,
-		chat => {
-			exchange => $room->{exchange},
-			url => $room->{url}
-		}
-	});
-}
+        $session->{chats}->{$reqid} = $room;
+
+        $session->svcdo(
+            CONNTYPE_BOS,
+            protobit  => "service_request",
+            reqid     => $reqid,
+            protodata => {
+                type => CONNTYPE_CHAT,
+                chat => {
+                    exchange => $room->{exchange},
+                    url      => $room->{url}
+                }
+            }
+        );
+    }
 
 };

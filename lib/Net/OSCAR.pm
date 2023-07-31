@@ -119,7 +119,7 @@ use strict;
 use vars qw($REVISION @ISA @EXPORT_OK %EXPORT_TAGS $NODESTROY);
 use Carp;
 use Scalar::Util qw(weaken);
-use Digest::MD5 qw(md5);
+use Digest::MD5  qw(md5);
 use Socket;
 use Net::OSCAR::Common qw(:all);
 use Net::OSCAR::Constants;
@@ -135,8 +135,8 @@ use Net::OSCAR::XML;
 $NODESTROY = 0;
 
 require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = @Net::OSCAR::Common::EXPORT_OK;
+@ISA         = qw(Exporter);
+@EXPORT_OK   = @Net::OSCAR::Common::EXPORT_OK;
 %EXPORT_TAGS = %Net::OSCAR::Common::EXPORT_TAGS;
 
 Net::OSCAR::XML::load_xml();
@@ -204,75 +204,78 @@ See L<"RATE LIMIT OVERVIEW"> for more information on the subject.
 =cut
 
 sub new($) {
-	my $class = ref($_[0]) || $_[0] || "Net::OSCAR";
-	shift;
+    my $class = ref( $_[0] ) || $_[0] || "Net::OSCAR";
+    shift;
 
-	my $self = {
-		options => {},
-		_parameters => [@_]
-	};
-	bless $self, $class;
+    my $self = {
+        options     => {},
+        _parameters => [@_]
+    };
+    bless $self, $class;
 
-	my(%parameters) = @_;
-	if(my($badparam) = grep { $_ ne "capabilities" and $_ ne "rate_manage" } keys %parameters) {
-		croak "Invalid parameter '$badparam' passed to Net::OSCAR::new.";
-	}
-	if($parameters{capabilities}) {
-		if(my($badcap) = grep { $_ ne "extended_status" and $_ ne "buddy_icons" and $_ ne "file_transfer" and $_ ne "file_sharing" and $_ ne "typing_status" and $_ ne "file_transfer" and $_ ne "buddy_list_transfer" } @{$parameters{capabilities}}) {
-			croak "Invalid capability '$badcap' passed to Net::OSCAR::new.";
-		}
-	}
-	if($parameters{rate_manage}) {
-		if($parameters{rate_manage} < OSCAR_RATE_MANAGE_NONE or $parameters{rate_manage} > OSCAR_RATE_MANAGE_MANUAL) {
-			croak "Invalid rate_manage value '$parameters{rate_manage}' passed to Net::OSCAR::new.";
-		} elsif($parameters{rate_manage} == OSCAR_RATE_MANAGE_AUTO) {
-			croak "OSCAR_RATE_MANAGE_AUTO hasn't been implemented yet!";
-		} else {
-			$self->{rate_manage_mode} = $parameters{rate_manage};
-			if($self->{rate_manage_mode} != OSCAR_RATE_MANAGE_NONE) {
-				require Net::OSCAR::MethodInfo;
-			}
-		}
-	} else {
-		$self->{rate_manage_mode} = OSCAR_RATE_MANAGE_NONE;
-	}
+    my (%parameters) = @_;
+    if ( my ($badparam) = grep { $_ ne "capabilities" and $_ ne "rate_manage" } keys %parameters ) {
+        croak "Invalid parameter '$badparam' passed to Net::OSCAR::new.";
+    }
+    if ( $parameters{capabilities} ) {
+        if ( my ($badcap) = grep { $_ ne "extended_status" and $_ ne "buddy_icons" and $_ ne "file_transfer" and $_ ne "file_sharing" and $_ ne "typing_status" and $_ ne "file_transfer" and $_ ne "buddy_list_transfer" } @{ $parameters{capabilities} } ) {
+            croak "Invalid capability '$badcap' passed to Net::OSCAR::new.";
+        }
+    }
+    if ( $parameters{rate_manage} ) {
+        if ( $parameters{rate_manage} < OSCAR_RATE_MANAGE_NONE or $parameters{rate_manage} > OSCAR_RATE_MANAGE_MANUAL ) {
+            croak "Invalid rate_manage value '$parameters{rate_manage}' passed to Net::OSCAR::new.";
+        }
+        elsif ( $parameters{rate_manage} == OSCAR_RATE_MANAGE_AUTO ) {
+            croak "OSCAR_RATE_MANAGE_AUTO hasn't been implemented yet!";
+        }
+        else {
+            $self->{rate_manage_mode} = $parameters{rate_manage};
+            if ( $self->{rate_manage_mode} != OSCAR_RATE_MANAGE_NONE ) {
+                require Net::OSCAR::MethodInfo;
+            }
+        }
+    }
+    else {
+        $self->{rate_manage_mode} = OSCAR_RATE_MANAGE_NONE;
+    }
 
-	$self->{LOGLEVEL} = OSCAR_DBG_WARN;
-	$self->{SNDEBUG} = 0;
-	$self->{__BLI_locked} = 0;
-	$self->{__BLI_commit_later} = 0;
+    $self->{LOGLEVEL}           = OSCAR_DBG_WARN;
+    $self->{SNDEBUG}            = 0;
+    $self->{__BLI_locked}       = 0;
+    $self->{__BLI_commit_later} = 0;
 
-	$self->{description} = "OSCAR session";
-	$self->{userinfo} = bltie;
-	$self->{services} = tlv;
-	$self->{svcqueues} = tlv;
-	$self->{listener} = undef;
-	$self->{rv_proposals} = {};
-	$self->{pass_is_hashed} = 0;
-	$self->{stealth} = 0;
-	$self->{icq_meta_info_cache} = {};
-	$self->{ip} = 0;
+    $self->{description}         = "OSCAR session";
+    $self->{userinfo}            = bltie;
+    $self->{services}            = tlv;
+    $self->{svcqueues}           = tlv;
+    $self->{listener}            = undef;
+    $self->{rv_proposals}        = {};
+    $self->{pass_is_hashed}      = 0;
+    $self->{stealth}             = 0;
+    $self->{icq_meta_info_cache} = {};
+    $self->{ip}                  = 0;
 
-	$self->{ft_ip} = undef;
-	$self->{rv_neg_mode} = OSCAR_RV_AUTO;
-	$self->{bl_limits} = {
-		buddies => 0,
-		groups => 0,
-		permits => 0,
-		denies => 0
-	};
+    $self->{ft_ip}       = undef;
+    $self->{rv_neg_mode} = OSCAR_RV_AUTO;
+    $self->{bl_limits}   = {
+        buddies => 0,
+        groups  => 0,
+        permits => 0,
+        denies  => 0
+    };
 
-	$self->{timeout} = 0.01;
-	$self->{capabilities} = {};
+    $self->{timeout}      = 0.01;
+    $self->{capabilities} = {};
 
-	if($parameters{capabilities}) {
-		$self->{capabilities}->{$_} = 1 foreach @{$parameters{capabilities}};
-	}
+    if ( $parameters{capabilities} ) {
+        $self->{capabilities}->{$_} = 1 foreach @{ $parameters{capabilities} };
+    }
 
-	# Set default callbacks
-	$self->set_callback_snac_unknown(\&Net::OSCAR::Callbacks::default_snac_unknown);
+    # Set default callbacks
+    $self->set_callback_snac_unknown( \&Net::OSCAR::Callbacks::default_snac_unknown );
 
-	return $self;
+    return $self;
 }
 
 =pod
@@ -350,62 +353,63 @@ as an ICQ UIN instead of an AIM screenname.
 =cut
 
 sub signon($@) {
-	my($self, $password, $host, %args);
-	$self = shift;
+    my ( $self, $password, $host, %args );
+    $self = shift;
 
-	# Determine whether caller is using hash-method or old method of passing parms.
-	# Note that this breaks if caller passes in both a host and a port using the old way.
-	# But hey, that's why it's deprecated!
-	if(@_ < 3) {
-		$args{screenname} = shift @_ or return $self->crapout($self->{services}->{0+CONNTYPE_BOS}, "You must specify a username to sign on with!");
-		$args{password} = shift @_ or return $self->crapout($self->{services}->{0+CONNTYPE_BOS}, "You must specify a password to sign on with!");;
-		$args{host} = shift @_ if @_;
-		$args{port} = shift @_ if @_;
-	} else {
-		%args = @_;
-		return $self->crapout($self->{services}->{0+CONNTYPE_BOS}, "You must specify a username and password to sign on with!") unless $args{screenname} and exists($args{password});
-	}
+    # Determine whether caller is using hash-method or old method of passing parms.
+    # Note that this breaks if caller passes in both a host and a port using the old way.
+    # But hey, that's why it's deprecated!
+    if ( @_ < 3 ) {
+        $args{screenname} = shift @_ or return $self->crapout( $self->{services}->{ 0 + CONNTYPE_BOS }, "You must specify a username to sign on with!" );
+        $args{password}   = shift @_ or return $self->crapout( $self->{services}->{ 0 + CONNTYPE_BOS }, "You must specify a password to sign on with!" );
+        $args{host}       = shift @_ if @_;
+        $args{port}       = shift @_ if @_;
+    }
+    else {
+        %args = @_;
+        return $self->crapout( $self->{services}->{ 0 + CONNTYPE_BOS }, "You must specify a username and password to sign on with!" ) unless $args{screenname} and exists( $args{password} );
+    }
 
-	my %defaults = OSCAR_SVC_AIM;
-	%defaults = OSCAR_SVC_ICQ if $args{screenname} =~ /^\d+$/;
-	foreach my $key(keys %defaults) {
-		$args{$key} ||= $defaults{$key};
-	}
-	return $self->crapout($self->{services}->{0+CONNTYPE_BOS}, "MD5 authentication not available for this service (you must define a password.)") if !defined($args{password}) and $args{hashlogin};
-	$self->{screenname} = Net::OSCAR::Screenname->new(\$args{screenname});
+    my %defaults = OSCAR_SVC_AIM;
+    %defaults = OSCAR_SVC_ICQ if $args{screenname} =~ /^\d+$/;
+    foreach my $key ( keys %defaults ) {
+        $args{$key} ||= $defaults{$key};
+    }
+    return $self->crapout( $self->{services}->{ 0 + CONNTYPE_BOS }, "MD5 authentication not available for this service (you must define a password.)" ) if !defined( $args{password} ) and $args{hashlogin};
+    $self->{screenname} = Net::OSCAR::Screenname->new( \$args{screenname} );
 
-	# We set BOS to the login connection so that our error handlers pick up errors on this connection as fatal.
-	$args{host} ||= "login.oscar.aol.com";
-	$args{port} ||= 5190;
+    # We set BOS to the login connection so that our error handlers pick up errors on this connection as fatal.
+    $args{host} ||= "login.oscar.aol.com";
+    $args{port} ||= 5190;
 
+    (
+        $self->{screenname},     $password,               $host, $self->{port},
+        $self->{proxy_type},     $self->{proxy_host},     $self->{proxy_port},
+        $self->{proxy_username}, $self->{proxy_password}, $self->{local_ip},
+        $self->{local_port},     $self->{pass_is_hashed}, $self->{stealth}
+    ) = delete @args{qw(screenname password host port proxy_type proxy_host proxy_port proxy_username proxy_password local_ip local_port pass_is_hashed stealth)};
 
-	($self->{screenname}, $password, $host, $self->{port},
-		$self->{proxy_type}, $self->{proxy_host}, $self->{proxy_port},
-		$self->{proxy_username}, $self->{proxy_password}, $self->{local_ip},
-		$self->{local_port}, $self->{pass_is_hashed}, $self->{stealth}) =
-			delete @args{qw(screenname password host port proxy_type proxy_host proxy_port proxy_username proxy_password local_ip local_port pass_is_hashed stealth)};
+    $self->{svcdata} = \%args;
 
-	$self->{svcdata} = \%args;
+    if ( defined( $self->{proxy_type} ) ) {
+        $self->{proxy_type} = uc( $self->{proxy_type} );
+        die "You must specify proxy_host if proxy_type is specified!\n" unless $self->{proxy_host};
+        if ( $self->{proxy_type} eq "HTTP" or $self->{proxy_type} eq "HTTPS" ) {
+            $self->{http_proxy} = LWP::UserAgent->new(
+                agent      => "Mozilla/4.08 [en] (WinNT; U ;Nav)",
+                keep_alive => 1,
+                timeout    => 30,
+            );
+            die "HTTPS not supported by your LWP::UserAgent\n" if $self->{proxy_type} eq "HTTPS" and !$self->{http_proxy}->is_protocol_supported("https");
 
-	if(defined($self->{proxy_type})) {
-		$self->{proxy_type} = uc($self->{proxy_type});
-		die "You must specify proxy_host if proxy_type is specified!\n" unless $self->{proxy_host};
-		if($self->{proxy_type} eq "HTTP" or $self->{proxy_type} eq "HTTPS") {
-			$self->{http_proxy} = LWP::UserAgent->new(
-				agent => "Mozilla/4.08 [en] (WinNT; U ;Nav)",
-				keep_alive => 1,
-				timeout => 30,
-			);
-			die "HTTPS not supported by your LWP::UserAgent\n" if $self->{proxy_type} eq "HTTPS" and !$self->{http_proxy}->is_protocol_supported("https");
+            my $proxyurl = lc( $self->{proxy_type} ) . "://$self->{proxy_host}";
+            $proxyurl .= ":$self->{proxy_port}" if $self->{proxy_port};
+            $proxyurl .= "/";
+            $self->{http_proxy}->proxy( 'http', $proxyurl );
+        }
+    }
 
-			my $proxyurl = lc($self->{proxy_type}) . "://$self->{proxy_host}";
-			$proxyurl .= ":$self->{proxy_port}" if $self->{proxy_port};
-			$proxyurl .= "/";
-			$self->{http_proxy}->proxy('http', $proxyurl);
-		}
-	}
-
-	$self->{services}->{0+CONNTYPE_BOS} = $self->addconn(auth => $password, conntype => CONNTYPE_LOGIN, description => "login", peer => $host);
+    $self->{services}->{ 0 + CONNTYPE_BOS } = $self->addconn( auth => $password, conntype => CONNTYPE_LOGIN, description => "login", peer => $host );
 }
 
 =pod
@@ -417,13 +421,13 @@ Sign off from the OSCAR service.
 =cut
 
 sub signoff($) {
-	my $self = shift;
-	foreach my $connection(@{$self->{connections}}) {
-		$self->delconn($connection);
-	}
-	my $screenname = $self->{screenname};
-	%$self = ();
-	$self->{screename} = $screenname; # Useful for post-mortem processing in multiconnection apps
+    my $self = shift;
+    foreach my $connection ( @{ $self->{connections} } ) {
+        $self->delconn($connection);
+    }
+    my $screenname = $self->{screenname};
+    %$self = ();
+    $self->{screename} = $screenname;    # Useful for post-mortem processing in multiconnection apps
 }
 
 =pod
@@ -462,19 +466,19 @@ is not found.)
 =cut
 
 sub findbuddy($$) {
-	my($self, $buddy) = @_;
+    my ( $self, $buddy ) = @_;
 
-	while(my($grpname, $group) = each(%{$self->{buddies}})) {
-		next if
-		  $grpname eq "__BLI_DIRTY" or
-		  !$group or
-		  not $group->{members}->{$buddy} or
-		  $group->{members}->{$buddy}->{__BLI_DELETED};
+    while ( my ( $grpname, $group ) = each( %{ $self->{buddies} } ) ) {
+        next
+          if $grpname eq "__BLI_DIRTY"
+          or !$group
+          or not $group->{members}->{$buddy}
+          or $group->{members}->{$buddy}->{__BLI_DELETED};
 
-		hash_iter_reset(\%{$self->{buddies}}); # Reset the iterator
-		return wantarray ? ($grpname, $group) : $grpname;
-	}
-	return;
+        hash_iter_reset( \%{ $self->{buddies} } );    # Reset the iterator
+        return wantarray ? ( $grpname, $group ) : $grpname;
+    }
+    return;
 }
 
 =pod
@@ -507,48 +511,49 @@ Call L<"commit_buddylist"> to save the new order on the OSCAR server.
 =cut
 
 sub commit_buddylist($) {
-	my($self) = shift;
-	return must_be_on($self) unless $self->{is_on};
+    my ($self) = shift;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($self->{__BLI_locked}) {
-		# If the server is modifying the buddylist,
-		# wait until its done to do the commit.
-		$self->{__BLI_commit_later} = 1;
-		return;
-	}
+    if ( $self->{__BLI_locked} ) {
 
-	Net::OSCAR::_BLInternal::NO_to_BLI($self);
+        # If the server is modifying the buddylist,
+        # wait until its done to do the commit.
+        $self->{__BLI_commit_later} = 1;
+        return;
+    }
 
-	# If user set icon to same as old icon, server won't request an upload.
-	# Send a buddy_icon_uploaded callback anyway.
-	if($self->{icon_md5sum_old} and $self->{icon_md5sum} eq $self->{icon_md5sum_old}) {
-		$self->callback_buddy_icon_uploaded();
-	}
+    Net::OSCAR::_BLInternal::NO_to_BLI($self);
 
-	delete $self->{icon_md5sum_old};
+    # If user set icon to same as old icon, server won't request an upload.
+    # Send a buddy_icon_uploaded callback anyway.
+    if ( $self->{icon_md5sum_old} and $self->{icon_md5sum} eq $self->{icon_md5sum_old} ) {
+        $self->callback_buddy_icon_uploaded();
+    }
+
+    delete $self->{icon_md5sum_old};
 }
 
 sub rollback_buddylist($) {
-	my($self) = shift;
-	return must_be_on($self) unless $self->{is_on};
-	Net::OSCAR::_BLInternal::BLI_to_NO($self);
+    my ($self) = shift;
+    return must_be_on($self) unless $self->{is_on};
+    Net::OSCAR::_BLInternal::BLI_to_NO($self);
 }
 
 sub reorder_groups($@) {
-	my $self = shift;
-	return must_be_on($self) unless $self->{is_on};
-	my @groups = @_;
-	tied(%{$self->{buddies}})->setorder(@groups);
-	$self->{buddies}->{__BLI_DIRTY} = 1;
+    my $self = shift;
+    return must_be_on($self) unless $self->{is_on};
+    my @groups = @_;
+    tied( %{ $self->{buddies} } )->setorder(@groups);
+    $self->{buddies}->{__BLI_DIRTY} = 1;
 }
 
 sub reorder_buddies($$@) {
-	my $self = shift;
-	return must_be_on($self) unless $self->{is_on};
-	my $group = shift;
-	my @buddies = @_;
-	tied(%{$self->{buddies}->{$group}->{members}})->setorder(@buddies);
-	$self->{buddies}->{$group}->{__BLI_DIRTY} = 1;
+    my $self = shift;
+    return must_be_on($self) unless $self->{is_on};
+    my $group   = shift;
+    my @buddies = @_;
+    tied( %{ $self->{buddies}->{$group}->{members} } )->setorder(@buddies);
+    $self->{buddies}->{$group}->{__BLI_DIRTY} = 1;
 }
 
 =pod
@@ -577,37 +582,36 @@ See L<add_group>.  Any buddies in the group will be removed from the group first
 =cut
 
 sub rename_group($$$) {
-	my($self, $oldgroup, $newgroup) = @_;
-	return must_be_on($self) unless $self->{is_on};
-	return send_error($self, $self->{services}->{0+CONNTYPE_BOS}, 0, "That group does not exist", 0) unless exists $self->{buddies}->{$oldgroup};
+    my ( $self, $oldgroup, $newgroup ) = @_;
+    return must_be_on($self)                                                                               unless $self->{is_on};
+    return send_error( $self, $self->{services}->{ 0 + CONNTYPE_BOS }, 0, "That group does not exist", 0 ) unless exists $self->{buddies}->{$oldgroup};
 
-	$self->{buddies}->{$newgroup} = $self->{buddies}->{$oldgroup};
-	$self->{buddies}->{$newgroup}->{__BLI_DIRTY} = 1;
-	delete $self->{buddies}->{$oldgroup};
+    $self->{buddies}->{$newgroup} = $self->{buddies}->{$oldgroup};
+    $self->{buddies}->{$newgroup}->{__BLI_DIRTY} = 1;
+    delete $self->{buddies}->{$oldgroup};
 }
 
 sub add_buddy($$@) {
-	my($self, $group, @buddies) = @_;
-	$self->mod_buddylist(MODBL_ACTION_ADD, MODBL_WHAT_BUDDY, $group, @buddies);
+    my ( $self, $group, @buddies ) = @_;
+    $self->mod_buddylist( MODBL_ACTION_ADD, MODBL_WHAT_BUDDY, $group, @buddies );
 }
 
 sub remove_buddy($$@) {
-	my($self, $group, @buddies) = @_;
-	$self->mod_buddylist(MODBL_ACTION_DEL, MODBL_WHAT_BUDDY, $group, @buddies);
+    my ( $self, $group, @buddies ) = @_;
+    $self->mod_buddylist( MODBL_ACTION_DEL, MODBL_WHAT_BUDDY, $group, @buddies );
 }
 
 sub add_group($$) {
-	my($self, $group) = @_;
-	$self->mod_buddylist(MODBL_ACTION_ADD, MODBL_WHAT_GROUP, $group);
+    my ( $self, $group ) = @_;
+    $self->mod_buddylist( MODBL_ACTION_ADD, MODBL_WHAT_GROUP, $group );
 }
 
 sub remove_group($$) {
-	my($self, $group) = @_;
-	return send_error($self, $self->{services}->{0+CONNTYPE_BOS}, 0, "That group does not exist", 0) unless exists $self->{buddies}->{$group};
-	$self->remove_buddy($group, $self->buddies($group)) if $self->buddies($group);
-	$self->mod_buddylist(MODBL_ACTION_DEL, MODBL_WHAT_GROUP, $group);
+    my ( $self, $group ) = @_;
+    return send_error( $self, $self->{services}->{ 0 + CONNTYPE_BOS }, 0, "That group does not exist", 0 ) unless exists $self->{buddies}->{$group};
+    $self->remove_buddy( $group, $self->buddies($group) ) if $self->buddies($group);
+    $self->mod_buddylist( MODBL_ACTION_DEL, MODBL_WHAT_GROUP, $group );
 }
-
 
 =item groups
 
@@ -627,39 +631,42 @@ a hashref as per L<USER INFORMATION> below.
 
 =cut
 
-sub groups($) { return grep {$_ and $_ ne "__BLI_DIRTY"} keys %{shift->{buddies}}; }
-sub buddies($;$) {
-	my($self, $group) = @_;
-
-	if($group) {
-		my $grp = $self->{buddies}->{$group};
-
-		return grep {
-			not $grp->{members}->{$_}->{__BLI_DELETED}
-		} keys %{$grp->{members}};
-	}
-
-	my @buddies;
-	while(my($grpname, $group) = each(%{$self->{buddies}})) {
-		next if !$grpname or $grpname eq "__BLI_DIRTY";
-		push @buddies, grep { not $group->{members}->{$_}->{__BLI_DELETED} } keys %{$group->{members}};
-	}
-	return @buddies;
+sub groups($) {
+    return grep { $_ and $_ ne "__BLI_DIRTY" } keys %{ shift->{buddies} };
 }
+
+sub buddies($;$) {
+    my ( $self, $group ) = @_;
+
+    if ($group) {
+        my $grp = $self->{buddies}->{$group};
+
+        return grep { not $grp->{members}->{$_}->{__BLI_DELETED} } keys %{ $grp->{members} };
+    }
+
+    my @buddies;
+    while ( my ( $grpname, $group ) = each( %{ $self->{buddies} } ) ) {
+        next if !$grpname or $grpname eq "__BLI_DIRTY";
+        push @buddies, grep { not $group->{members}->{$_}->{__BLI_DELETED} } keys %{ $group->{members} };
+    }
+    return @buddies;
+}
+
 sub buddy($$;$) {
-	my($self, $buddy, $grpname) = @_;
-	my $group;
+    my ( $self, $buddy, $grpname ) = @_;
+    my $group;
 
-	if(!$grpname) {
-		($grpname, $group) = $self->findbuddy($buddy) or return;
-	} else {
-		$group = $self->{buddies}->{$grpname} or return;
-	}
+    if ( !$grpname ) {
+        ( $grpname, $group ) = $self->findbuddy($buddy) or return;
+    }
+    else {
+        $group = $self->{buddies}->{$grpname} or return;
+    }
 
-	my $ret = $group->{members}->{$buddy};
-	return $ret->{__BLI_DELETED} ? undef : $ret;
+    my $ret = $group->{members}->{$buddy};
+    return $ret->{__BLI_DELETED} ? undef : $ret;
 
-	return $self->{userinfo}->{$buddy} || undef;
+    return $self->{userinfo}->{$buddy} || undef;
 }
 
 =pod
@@ -679,21 +686,21 @@ deleted.
 =cut
 
 sub set_buddy_comment($$$;$) {
-	my($self, $group, $buddy, $comment) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $group, $buddy, $comment ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
-	$bud->{comment} = $comment;
-	$bud->{__BLI_DIRTY} = 1;
+    my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
+    $bud->{comment}     = $comment;
+    $bud->{__BLI_DIRTY} = 1;
 }
 
 sub set_buddy_alias($$$;$) {
-	my($self, $group, $buddy, $alias) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $group, $buddy, $alias ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
-	$bud->{alias} = $alias;
-	$bud->{__BLI_DIRTY} = 1;
+    my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
+    $bud->{alias}       = $alias;
+    $bud->{__BLI_DIRTY} = 1;
 }
 
 =pod
@@ -731,7 +738,7 @@ If the OSCAR server did not inform us of the limits, values of 0 will be used.
 
 =cut
 
-sub buddylist_limits($) { return %{shift->{bl_limits}}; }
+sub buddylist_limits($) { return %{ shift->{bl_limits} }; }
 
 =pod
 
@@ -852,14 +859,13 @@ Returns the user's current visibility setting.  See L<set_visibility>.
 
 =cut
 
-sub add_permit($@) { shift->mod_permit(MODBL_ACTION_ADD, "permit", @_); }
-sub add_deny($@) { shift->mod_permit(MODBL_ACTION_ADD, "deny", @_); }
-sub remove_permit($@) { shift->mod_permit(MODBL_ACTION_DEL, "permit", @_); }
-sub remove_deny($@) { shift->mod_permit(MODBL_ACTION_DEL, "deny", @_); }
-sub get_permitlist($) { return keys %{shift->{permit}}; }
-sub get_denylist(@) { return keys %{shift->{deny}}; }
-sub visibility($) { return shift->{visibility}; }
-
+sub add_permit($@)    { shift->mod_permit( MODBL_ACTION_ADD, "permit", @_ ); }
+sub add_deny($@)      { shift->mod_permit( MODBL_ACTION_ADD, "deny",   @_ ); }
+sub remove_permit($@) { shift->mod_permit( MODBL_ACTION_DEL, "permit", @_ ); }
+sub remove_deny($@)   { shift->mod_permit( MODBL_ACTION_DEL, "deny",   @_ ); }
+sub get_permitlist($) { return keys %{ shift->{permit} }; }
+sub get_denylist(@)   { return keys %{ shift->{deny} }; }
+sub visibility($)     { return shift->{visibility}; }
 
 =pod
 
@@ -916,10 +922,10 @@ Call L<"commit_buddylist"> for the change to take effect.
 =cut
 
 sub set_visibility($$) {
-	my($self, $vismode) = @_;
+    my ( $self, $vismode ) = @_;
 
-	return must_be_on($self) unless $self->{is_on};
-	$self->{visibility} = $vismode;
+    return must_be_on($self) unless $self->{is_on};
+    $self->{visibility} = $vismode;
 }
 
 =pod
@@ -941,11 +947,10 @@ nicely.
 =cut
 
 sub is_stealth($) { return shift->{stealth}; }
+
 sub set_stealth($$) {
-	my($self, $new_state) = @_;
-	$self->svcdo(CONNTYPE_BOS, protobit => "set_extended_status", protodata => {
-		stealth => {state => $new_state ? 0x100 : 0}
-	});
+    my ( $self, $new_state ) = @_;
+    $self->svcdo( CONNTYPE_BOS, protobit => "set_extended_status", protodata => { stealth => { state => $new_state ? 0x100 : 0 } } );
 }
 
 =pod
@@ -972,12 +977,12 @@ Call L<"commit_buddylist"> for the change to take effect.
 =cut
 
 sub set_group_permissions($@) {
-	my($self, @perms) = @_;
-	my $perms = 0xFFFFFF00;
+    my ( $self, @perms ) = @_;
+    my $perms = 0xFFFFFF00;
 
-	return must_be_on($self) unless $self->{is_on};
-	foreach my $perm (@perms) { $perms |= $perm; }
-	$self->{groupperms} = $perms;
+    return must_be_on($self) unless $self->{is_on};
+    foreach my $perm (@perms) { $perms |= $perm; }
+    $self->{groupperms} = $perms;
 }
 
 =pod
@@ -990,13 +995,13 @@ that L<"set_group_permissions"> wants.
 =cut
 
 sub group_permissions($) {
-	my $self = shift;
-	my @retval = ();
+    my $self   = shift;
+    my @retval = ();
 
-	foreach my $perm (GROUPPERM_OSCAR, GROUPPERM_AOL) {
-		push @retval, $perm if $self->{groupperms} & $perm;
-	}
-	return @retval;
+    foreach my $perm ( GROUPPERM_OSCAR, GROUPPERM_AOL ) {
+        push @retval, $perm if $self->{groupperms} & $perm;
+    }
+    return @retval;
 }
 
 =pod
@@ -1024,18 +1029,18 @@ their profile.
 =cut
 
 sub get_info($$) {
-	my($self, $screenname) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $screenname ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	$self->svcdo(CONNTYPE_BOS, reqdata => $screenname, protobit => "get_info", protodata => {screenname => $screenname});
+    $self->svcdo( CONNTYPE_BOS, reqdata => $screenname, protobit => "get_info", protodata => { screenname => $screenname } );
 }
+
 sub get_away($$) {
-	my($self, $screenname) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $screenname ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	$self->svcdo(CONNTYPE_BOS, reqdata => $screenname, protobit => "get_away", protodata => {screenname => $screenname});
+    $self->svcdo( CONNTYPE_BOS, reqdata => $screenname, protobit => "get_away", protodata => { screenname => $screenname } );
 }
-
 
 =pod
 
@@ -1052,43 +1057,48 @@ If the message was too long to send, returns zero.
 =cut
 
 sub send_im($$$;$) {
-	my($self, $to, $msg, $away) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $to, $msg, $away ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	if(!$self->{svcdata}->{hashlogin}) {
-		return 0 if length($msg) >= 7987;
-	} else {
-		return 0 if length($msg) > 2000;
-	}
+    if ( !$self->{svcdata}->{hashlogin} ) {
+        return 0 if length($msg) >= 7987;
+    }
+    else {
+        return 0 if length($msg) > 2000;
+    }
 
-	my %protodata;
-	$protodata{message} = $msg;
+    my %protodata;
+    $protodata{message} = $msg;
 
-	if($away) {
-		$protodata{is_automatic} = {};
-	} else {
-		$protodata{request_server_confirmation} = {};
-	}
+    if ($away) {
+        $protodata{is_automatic} = {};
+    }
+    else {
+        $protodata{request_server_confirmation} = {};
+    }
 
-	if($self->{capabilities}->{buddy_icons} and $self->{icon_checksum} and $self->{icon_timestamp} and
-		(!exists($self->{userinfo}->{$to}) or
-		!exists($self->{userinfo}->{to}->{icon_timestamp_received}) or
-		$self->{icon_timestamp} > $self->{userinfo}->{$to}->{icon_timestamp_received})
-	) {
-		$self->log_print(OSCAR_DBG_DEBUG, "Informing $to about our buddy icon.");
-		$self->{userinfo}->{$to} ||= {};
-		$self->{userinfo}->{$to}->{icon_timestamp_received} = $self->{icon_timestamp};
+    if (
+            $self->{capabilities}->{buddy_icons}
+        and $self->{icon_checksum}
+        and $self->{icon_timestamp}
+        and (  !exists( $self->{userinfo}->{$to} )
+            or !exists( $self->{userinfo}->{to}->{icon_timestamp_received} )
+            or $self->{icon_timestamp} > $self->{userinfo}->{$to}->{icon_timestamp_received} )
+    ) {
+        $self->log_print( OSCAR_DBG_DEBUG, "Informing $to about our buddy icon." );
+        $self->{userinfo}->{$to} ||= {};
+        $self->{userinfo}->{$to}->{icon_timestamp_received} = $self->{icon_timestamp};
 
-		$protodata{icon_data}->{"icon_".$_} = $self->{"icon_".$_} foreach qw(length checksum timestamp);
-	}
+        $protodata{icon_data}->{ "icon_" . $_ } = $self->{ "icon_" . $_ } foreach qw(length checksum timestamp);
+    }
 
-	my $flags2 = 0;
-	if($self->{capabilities}->{typing_status}) {
-		$flags2 = 0xB;
-	}
+    my $flags2 = 0;
+    if ( $self->{capabilities}->{typing_status} ) {
+        $flags2 = 0xB;
+    }
 
-	my($req_id) = $self->send_message($to, 1, protoparse($self, "standard_IM_footer")->pack(%protodata), $flags2);
-	return $req_id;
+    my ($req_id) = $self->send_message( $to, 1, protoparse( $self, "standard_IM_footer" )->pack(%protodata), $flags2 );
+    return $req_id;
 }
 
 =pod
@@ -1122,17 +1132,20 @@ then erases all of the text in the message input area.
 =cut
 
 sub send_typing_status($$$) {
-	my($self, $recipient, $status) = @_;
+    my ( $self, $recipient, $status ) = @_;
 
-	croak "This client does not support typing status notifications." unless $self->{capabilities}->{typing_status};
-	return unless exists $self->{userinfo}->{$recipient} and $self->{userinfo}->{$recipient}->{typing_status};
+    croak "This client does not support typing status notifications." unless $self->{capabilities}->{typing_status};
+    return                                                            unless exists $self->{userinfo}->{$recipient} and $self->{userinfo}->{$recipient}->{typing_status};
 
-	$self->svcdo(CONNTYPE_BOS, protobit => "typing_notification", protodata => {
-		screenname => $recipient,
-		typing_status => $status
-	});
+    $self->svcdo(
+        CONNTYPE_BOS,
+        protobit  => "typing_notification",
+        protodata => {
+            screenname    => $recipient,
+            typing_status => $status
+        }
+    );
 }
-
 
 =pod
 
@@ -1150,13 +1163,18 @@ like send you an instant message.
 =cut
 
 sub evil($$;$) {
-	my($self, $who, $anon) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $who, $anon ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	$self->svcdo(CONNTYPE_BOS, reqdata => $who, protobit => "outgoing_warning", protodata => {
-		is_anonymous => $anon ? 1 : 0,
-		screenname => $who
-	});
+    $self->svcdo(
+        CONNTYPE_BOS,
+        reqdata   => $who,
+        protobit  => "outgoing_warning",
+        protodata => {
+            is_anonymous => $anon ? 1 : 0,
+            screenname   => $who
+        }
+    );
 }
 
 =pod
@@ -1176,15 +1194,19 @@ response to this method.
 =cut
 
 sub get_icon($$$) {
-	my($self, $screenname, $md5sum) = @_;
+    my ( $self, $screenname, $md5sum ) = @_;
 
-	carp "This client does not support buddy icons!" unless $self->{capabilities}->{buddy_icons};
+    carp "This client does not support buddy icons!" unless $self->{capabilities}->{buddy_icons};
 
-	$self->svcdo(CONNTYPE_ICON, protobit => "buddy_icon_download", protodata => {
-		screenname => $screenname,
-		md5sum => $md5sum
-	});
-}	
+    $self->svcdo(
+        CONNTYPE_ICON,
+        protobit  => "buddy_icon_download",
+        protodata => {
+            screenname => $screenname,
+            md5sum     => $md5sum
+        }
+    );
+}
 
 =pod
 
@@ -1270,9 +1292,9 @@ returns false.
 
 =cut
 
-sub email($) { return shift->{email}; }
+sub email($)      { return shift->{email}; }
 sub screenname($) { return shift->{screenname}; }
-sub is_on($) { return shift->{is_on}; }
+sub is_on($)      { return shift->{is_on}; }
 
 =item profile
 
@@ -1293,15 +1315,15 @@ marked as no longer being away.  See also L<"get_away">.
 =cut
 
 sub set_away($$) {
-	my($self, $awaymsg) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $awaymsg ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	# Because we use !defined(awaymsg) to indicate
-	# that we just want to set the profile, force
-	# it to be defined.
-	$awaymsg = "" unless defined($awaymsg);
+    # Because we use !defined(awaymsg) to indicate
+    # that we just want to set the profile, force
+    # it to be defined.
+    $awaymsg = "" unless defined($awaymsg);
 
-	shift->set_info(undef, $awaymsg);
+    shift->set_info( undef, $awaymsg );
 }
 
 =pod
@@ -1319,15 +1341,13 @@ user's extended status.
 =cut
 
 sub set_extended_status($$) {
-	my($self, $status) = @_;
-	croak "This client does not support extended status messages." unless $self->{capabilities}->{extended_status};
+    my ( $self, $status ) = @_;
+    croak "This client does not support extended status messages." unless $self->{capabilities}->{extended_status};
 
-	$status ||= "";
+    $status ||= "";
 
-	$self->log_print(OSCAR_DBG_NOTICE, "Setting extended status.");
-	$self->svcdo(CONNTYPE_BOS, protobit => "set_extended_status", protodata => {
-		status_message => {message => $status}
-	});
+    $self->log_print( OSCAR_DBG_NOTICE, "Setting extended status." );
+    $self->svcdo( CONNTYPE_BOS, protobit => "set_extended_status", protodata => { status_message => { message => $status } } );
 }
 
 =pod
@@ -1351,26 +1371,26 @@ Use L<"get_info"> to retrieve another user's profile.
 =cut
 
 sub set_info($$;$) {
-	my($self, $profile, $awaymsg) = @_;
+    my ( $self, $profile, $awaymsg ) = @_;
 
-	return must_be_on($self) unless $self->{services}->{0+CONNTYPE_BOS};
-	$self->log_print(OSCAR_DBG_NOTICE, "Setting user information.");
+    return must_be_on($self) unless $self->{services}->{ 0 + CONNTYPE_BOS };
+    $self->log_print( OSCAR_DBG_NOTICE, "Setting user information." );
 
-	my %protodata;
-	$protodata{capabilities} = $self->capabilities();
+    my %protodata;
+    $protodata{capabilities} = $self->capabilities();
 
-	if(defined($profile)) {
-		$protodata{profile_mimetype} = 'text/aolrtf; charset="us-ascii"';
-		$protodata{profile} = $profile;
-		$self->{profile} = $profile;
-	}
+    if ( defined($profile) ) {
+        $protodata{profile_mimetype} = 'text/aolrtf; charset="us-ascii"';
+        $protodata{profile}          = $profile;
+        $self->{profile}             = $profile;
+    }
 
-	if(defined($awaymsg)) {
-		$protodata{awaymsg_mimetype} = 'text/aolrtf; charset="us-ascii"';
-		$protodata{awaymsg} = $awaymsg;
-	}
+    if ( defined($awaymsg) ) {
+        $protodata{awaymsg_mimetype} = 'text/aolrtf; charset="us-ascii"';
+        $protodata{awaymsg}          = $awaymsg;
+    }
 
-	$self->svcdo(CONNTYPE_BOS, protobit => "set_info", protodata => \%protodata);
+    $self->svcdo( CONNTYPE_BOS, protobit => "set_info", protodata => \%protodata );
 }
 
 =pod
@@ -1404,26 +1424,26 @@ Use L<"get_icon"> to retrieve another user's icon.
 =cut
 
 sub set_icon($$) {
-	my($self, $icon) = @_;
+    my ( $self, $icon ) = @_;
 
-	carp "This client does not support buddy icons!" unless $self->{capabilities}->{buddy_icons};
+    carp "This client does not support buddy icons!" unless $self->{capabilities}->{buddy_icons};
 
-	if($icon) {
-		$self->{icon} = $icon;
-		$self->{icon_md5sum_old} = $self->{icon_md5sum} || "";
-		$self->{icon_md5sum} = pack("n", 0x10) . md5($icon);
-		$self->{icon_checksum} = $self->icon_checksum($icon);
-		$self->{icon_timestamp} = time;
-		$self->{icon_length} = length($icon);
-	} else {
-		delete $self->{icon};
-		delete $self->{icon_md5sum};
-		delete $self->{icon_checksum};
-		delete $self->{icon_timestamp};
-		delete $self->{icon_length};
-	}
+    if ($icon) {
+        $self->{icon}            = $icon;
+        $self->{icon_md5sum_old} = $self->{icon_md5sum} || "";
+        $self->{icon_md5sum}     = pack( "n", 0x10 ) . md5($icon);
+        $self->{icon_checksum}   = $self->icon_checksum($icon);
+        $self->{icon_timestamp}  = time;
+        $self->{icon_length}     = length($icon);
+    }
+    else {
+        delete $self->{icon};
+        delete $self->{icon_md5sum};
+        delete $self->{icon_checksum};
+        delete $self->{icon_timestamp};
+        delete $self->{icon_length};
+    }
 }
-
 
 =pod
 
@@ -1434,20 +1454,25 @@ Changes the user's password.
 =cut
 
 sub change_password($$$) {
-	my($self, $currpass, $newpass) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $currpass, $newpass ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($self->{adminreq}->{0+ADMIN_TYPE_PASSWORD_CHANGE}) {
-		$self->callback_admin_error(ADMIN_TYPE_PASSWORD_CHANGE, ADMIN_ERROR_REQPENDING);
-		return;
-	} else {
-		$self->{adminreq}->{0+ADMIN_TYPE_PASSWORD_CHANGE}++;
-	}
+    if ( $self->{adminreq}->{ 0 + ADMIN_TYPE_PASSWORD_CHANGE } ) {
+        $self->callback_admin_error( ADMIN_TYPE_PASSWORD_CHANGE, ADMIN_ERROR_REQPENDING );
+        return;
+    }
+    else {
+        $self->{adminreq}->{ 0 + ADMIN_TYPE_PASSWORD_CHANGE }++;
+    }
 
-	$self->svcdo(CONNTYPE_ADMIN, protobit => "change_account_info", protodata => {
-		newpass => $newpass,
-		oldpass => $currpass
-	});
+    $self->svcdo(
+        CONNTYPE_ADMIN,
+        protobit  => "change_account_info",
+        protodata => {
+            newpass => $newpass,
+            oldpass => $currpass
+        }
+    );
 }
 
 =pod
@@ -1461,17 +1486,18 @@ information is requested.
 =cut
 
 sub confirm_account($) {
-	my($self) = shift;
-	return must_be_on($self) unless $self->{is_on};
+    my ($self) = shift;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($self->{adminreq}->{0+ADMIN_TYPE_ACCOUNT_CONFIRM}) {
-		$self->callback_admin_error(ADMIN_TYPE_ACCOUNT_CONFIRM, ADMIN_ERROR_REQPENDING);
-		return;
-	} else {
-		$self->{adminreq}->{0+ADMIN_TYPE_ACCOUNT_CONFIRM}++;
-	}
+    if ( $self->{adminreq}->{ 0 + ADMIN_TYPE_ACCOUNT_CONFIRM } ) {
+        $self->callback_admin_error( ADMIN_TYPE_ACCOUNT_CONFIRM, ADMIN_ERROR_REQPENDING );
+        return;
+    }
+    else {
+        $self->{adminreq}->{ 0 + ADMIN_TYPE_ACCOUNT_CONFIRM }++;
+    }
 
-	$self->svcdo(CONNTYPE_ADMIN, protobit => "confirm_account_request");
+    $self->svcdo( CONNTYPE_ADMIN, protobit => "confirm_account_request" );
 }
 
 =pod
@@ -1490,19 +1516,18 @@ user forgets it.
 =cut
 
 sub change_email($$) {
-	my($self, $newmail) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $newmail ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($self->{adminreq}->{0+ADMIN_TYPE_EMAIL_CHANGE}) {
-		$self->callback_admin_error(ADMIN_TYPE_EMAIL_CHANGE, ADMIN_ERROR_REQPENDING);
-		return;
-	} else {
-		$self->{adminreq}->{0+ADMIN_TYPE_EMAIL_CHANGE}++;
-	}
+    if ( $self->{adminreq}->{ 0 + ADMIN_TYPE_EMAIL_CHANGE } ) {
+        $self->callback_admin_error( ADMIN_TYPE_EMAIL_CHANGE, ADMIN_ERROR_REQPENDING );
+        return;
+    }
+    else {
+        $self->{adminreq}->{ 0 + ADMIN_TYPE_EMAIL_CHANGE }++;
+    }
 
-	$self->svcdo(CONNTYPE_ADMIN, protobit => "change_account_info", protodata => {
-		new_email => $newmail
-	});
+    $self->svcdo( CONNTYPE_ADMIN, protobit => "change_account_info", protodata => { new_email => $newmail } );
 }
 
 =pod
@@ -1516,19 +1541,18 @@ case may be changed and spaces may be inserted or deleted.
 =cut
 
 sub format_screenname($$) {
-	my($self, $newname) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $newname ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($self->{adminreq}->{0+ADMIN_TYPE_SCREENNAME_FORMAT}) {
-		$self->callback_admin_error(ADMIN_TYPE_SCREENNAME_FORMAT, ADMIN_ERROR_REQPENDING);
-		return;
-	} else {
-		$self->{adminreq}->{0+ADMIN_TYPE_SCREENNAME_FORMAT}++;
-	}
+    if ( $self->{adminreq}->{ 0 + ADMIN_TYPE_SCREENNAME_FORMAT } ) {
+        $self->callback_admin_error( ADMIN_TYPE_SCREENNAME_FORMAT, ADMIN_ERROR_REQPENDING );
+        return;
+    }
+    else {
+        $self->{adminreq}->{ 0 + ADMIN_TYPE_SCREENNAME_FORMAT }++;
+    }
 
-	$self->svcdo(CONNTYPE_ADMIN, protobit => "change_account_info", protodata => {
-		new_screenname => $newname
-	});
+    $self->svcdo( CONNTYPE_ADMIN, protobit => "change_account_info", protodata => { new_screenname => $newname } );
 }
 
 =pod
@@ -1543,9 +1567,9 @@ the user as being idle.
 =cut
 
 sub set_idle($$) {
-	my($self, $time) = @_;
-	return must_be_on($self) unless $self->{is_on};
-	$self->svcdo(CONNTYPE_BOS, protobit => "set_idle", protodata => {duration => $time});
+    my ( $self, $time ) = @_;
+    return must_be_on($self) unless $self->{is_on};
+    $self->svcdo( CONNTYPE_BOS, protobit => "set_idle", protodata => { duration => $time } );
 }
 
 =pod
@@ -1605,62 +1629,62 @@ a file handle, or the data to send.
 =cut
 
 sub file_send($$@) {
-	my($self, $screenname, $message, @filerefs) = @_;
+    my ( $self, $screenname, $message, @filerefs ) = @_;
 
-	my $connection = $self->addconn(conntype => CONNTYPE_DIRECT_IN);
-	my($port) = sockaddr_in(getsockname($connection->{socket}));
+    my $connection = $self->addconn( conntype => CONNTYPE_DIRECT_IN );
+    my ($port) = sockaddr_in( getsockname( $connection->{socket} ) );
 
-	my $size = 0;
-	$size += length($_->{data}) foreach @filerefs;
+    my $size = 0;
+    $size += length( $_->{data} ) foreach @filerefs;
 
-	my %svcdata = (
-		file_count_status => (@filerefs > 1 ? 2 : 1),
-		file_count => scalar(@filerefs),
-		size => $size,
-		files => [map {$_->{name}} @filerefs]
-	);
+    my %svcdata = (
+        file_count_status => ( @filerefs > 1 ? 2 : 1 ),
+        file_count        => scalar(@filerefs),
+        size              => $size,
+        files             => [ map { $_->{name} } @filerefs ]
+    );
 
-	my $cookie = randchars(8);
-	my($ip) = unpack("N", inet_aton($self->{services}->{CONNTYPE_BOS()}->local_ip()));
-	my %protodata = (
-		capability => OSCAR_CAPS()->{filexfer}->{value},
-		charset => "us-ascii",
-		cookie => $cookie,
-		invitation_msg => $message,
-		language => 101,
-		push_pull => 1,
-		status => "propose",
-		client_1_ip => $ip,
-		client_2_ip => $ip,
-		port => $port,
-		proxy_ip => unpack("N", inet_aton("63.87.248.248")), # TODO: What's this really supposed to be?
-		svcdata_charset => "us-ascii",
-		svcdata => protoparse($self, "file_transfer_rendezvous_data")->pack(%svcdata)
-	);
+    my $cookie    = randchars(8);
+    my ($ip)      = unpack( "N", inet_aton( $self->{services}->{ CONNTYPE_BOS() }->local_ip() ) );
+    my %protodata = (
+        capability      => OSCAR_CAPS()->{filexfer}->{value},
+        charset         => "us-ascii",
+        cookie          => $cookie,
+        invitation_msg  => $message,
+        language        => 101,
+        push_pull       => 1,
+        status          => "propose",
+        client_1_ip     => $ip,
+        client_2_ip     => $ip,
+        port            => $port,
+        proxy_ip        => unpack( "N", inet_aton("63.87.248.248") ),                             # TODO: What's this really supposed to be?
+        svcdata_charset => "us-ascii",
+        svcdata         => protoparse( $self, "file_transfer_rendezvous_data" )->pack(%svcdata)
+    );
 
-	my($req_id) = $self->send_message($screenname, 2, pack("nn", 3, 0) . protoparse($self, "rendezvous_IM")->pack(%protodata), 0, $cookie);
+    my ($req_id) = $self->send_message( $screenname, 2, pack( "nn", 3, 0 ) . protoparse( $self, "rendezvous_IM" )->pack(%protodata), 0, $cookie );
 
-	$self->{rv_proposals}->{$cookie} = $connection->{rv} = {
-		cookie => $cookie,
-		sender => $self->{screenname},
-		recipient => $screenname,
-		peer => $screenname,
-		type => "filexfer",
-		connection => $connection,
-		ft_state => "listening",
-		direction => "send",
-		accepted => 0,
-		filenames => [map {$_->{name}} @filerefs],
-		data => [map {$_->{data}} @filerefs],
-		using_proxy => 0,
-		tried_proxy => 0,
-		tried_listen => 1,
-		tried_connect => 0,
-		total_size => $size,
-		file_count => scalar(@filerefs)
-	};
+    $self->{rv_proposals}->{$cookie} = $connection->{rv} = {
+        cookie        => $cookie,
+        sender        => $self->{screenname},
+        recipient     => $screenname,
+        peer          => $screenname,
+        type          => "filexfer",
+        connection    => $connection,
+        ft_state      => "listening",
+        direction     => "send",
+        accepted      => 0,
+        filenames     => [ map { $_->{name} } @filerefs ],
+        data          => [ map { $_->{data} } @filerefs ],
+        using_proxy   => 0,
+        tried_proxy   => 0,
+        tried_listen  => 1,
+        tried_connect => 0,
+        total_size    => $size,
+        file_count    => scalar(@filerefs)
+    };
 
-	return ($req_id, $cookie);
+    return ( $req_id, $cookie );
 }
 
 =pod
@@ -1684,26 +1708,27 @@ by this method.
 =cut
 
 sub do_one_loop($) {
-	my $self = shift;
-	my $timeout = $self->{timeout};
+    my $self    = shift;
+    my $timeout = $self->{timeout};
 
-	undef $timeout if defined($timeout) and $timeout == -1;
+    undef $timeout if defined($timeout) and $timeout == -1;
 
-	my($rin, $win, $ein) = ('', '', '');
+    my ( $rin, $win, $ein ) = ( '', '', '' );
 
-	foreach my $connection(@{$self->{connections}}) {
-		next unless exists($connection->{socket});
-		if($connection->{connected}) {
-			vec($rin, fileno $connection->{socket}, 1) = 1;
-		} elsif(!$connection->{connected} or $connection->{outbuff}) {
-			vec($win, fileno $connection->{socket}, 1) = 1;
-		}
-	}
-	$ein = $rin | $win;
+    foreach my $connection ( @{ $self->{connections} } ) {
+        next unless exists( $connection->{socket} );
+        if ( $connection->{connected} ) {
+            vec( $rin, fileno $connection->{socket}, 1 ) = 1;
+        }
+        elsif ( !$connection->{connected} or $connection->{outbuff} ) {
+            vec( $win, fileno $connection->{socket}, 1 ) = 1;
+        }
+    }
+    $ein = $rin | $win;
 
-	return unless $ein;
-	my $nfound = select($rin, $win, $ein, $timeout);
-	$self->process_connections(\$rin, \$win, \$ein) if $nfound and $nfound != -1;
+    return unless $ein;
+    my $nfound = select( $rin, $win, $ein, $timeout );
+    $self->process_connections( \$rin, \$win, \$ein ) if $nfound and $nfound != -1;
 }
 
 =pod
@@ -1729,30 +1754,31 @@ bit vectors to use in your C<select>.
 =cut
 
 sub process_connections($\$\$\$) {
-	my($self, $readers, $writers, $errors) = @_;
+    my ( $self, $readers, $writers, $errors ) = @_;
 
-	# Filter out our connections and remove them from the to-do list
-	foreach my $connection(@{$self->{connections}}) {
-		my($read, $write) = (0, 0);
-		next unless $connection->fileno;
-		if($connection->{connected}) {
-			next unless vec($$readers | $$errors, $connection->fileno, 1);
-			vec($$readers, $connection->fileno, 1) = 0;
-			$read = 1;
-		}
-		if(!$connection->{connected} or $connection->{outbuff}) {
-			next unless vec($$writers | $$errors, $connection->fileno, 1);
-			vec($$writers, $connection->fileno, 1) = 0;
-			$write = 1;
-		}
-		if(vec($$errors, $connection->fileno, 1)) {
-			vec($$errors, $connection->fileno, 1) = 0;
-			$connection->{sockerr} = 1;
-			$connection->disconnect();
-		} else {
-			$connection->process_one($read, $write);
-		}
-	}
+    # Filter out our connections and remove them from the to-do list
+    foreach my $connection ( @{ $self->{connections} } ) {
+        my ( $read, $write ) = ( 0, 0 );
+        next unless $connection->fileno;
+        if ( $connection->{connected} ) {
+            next unless vec( $$readers | $$errors, $connection->fileno, 1 );
+            vec( $$readers, $connection->fileno, 1 ) = 0;
+            $read = 1;
+        }
+        if ( !$connection->{connected} or $connection->{outbuff} ) {
+            next unless vec( $$writers | $$errors, $connection->fileno, 1 );
+            vec( $$writers, $connection->fileno, 1 ) = 0;
+            $write = 1;
+        }
+        if ( vec( $$errors, $connection->fileno, 1 ) ) {
+            vec( $$errors, $connection->fileno, 1 ) = 0;
+            $connection->{sockerr} = 1;
+            $connection->disconnect();
+        }
+        else {
+            $connection->process_one( $read, $write );
+        }
+    }
 }
 
 =pod
@@ -1794,16 +1820,21 @@ for that.
 =cut
 
 sub chat_join($$;$) {
-	my($self, $name, $exchange) = @_;
-	return must_be_on($self) unless $self->{is_on};
-	$exchange ||= 4;
+    my ( $self, $name, $exchange ) = @_;
+    return must_be_on($self) unless $self->{is_on};
+    $exchange ||= 4;
 
-	my $reqid = (8<<16) | (unpack("n", randchars(2)))[0];
-	$self->{chats}->{pack("N", $reqid)} = $name;
-	$self->svcdo(CONNTYPE_CHATNAV, reqid => $reqid, protobit => "chat_navigator_room_create", protodata => {
-		exchange => $exchange,
-		name => $name
-	});
+    my $reqid = ( 8 << 16 ) | ( unpack( "n", randchars(2) ) )[0];
+    $self->{chats}->{ pack( "N", $reqid ) } = $name;
+    $self->svcdo(
+        CONNTYPE_CHATNAV,
+        reqid     => $reqid,
+        protobit  => "chat_navigator_room_create",
+        protodata => {
+            exchange => $exchange,
+            name     => $name
+        }
+    );
 }
 
 =pod
@@ -1819,47 +1850,59 @@ Use this to decline an invitation to join a chatroom.
 =cut
 
 sub chat_accept($$) {
-	my($self, $url) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $url ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	$self->log_print(OSCAR_DBG_NOTICE, "Accepting chat invite for $url.");
-	my($rv) = grep { $_->{chat_url} eq $url } values %{$self->{rv_proposals}};
-	return unless $rv;
+    $self->log_print( OSCAR_DBG_NOTICE, "Accepting chat invite for $url." );
+    my ($rv) = grep { $_->{chat_url} eq $url } values %{ $self->{rv_proposals} };
+    return unless $rv;
 
-	$self->svcdo(CONNTYPE_CHATNAV, protobit => "chat_invitation_accept", protodata => {
-		exchange => $rv->{exchange},
-		url => $url
-	});
+    $self->svcdo(
+        CONNTYPE_CHATNAV,
+        protobit  => "chat_invitation_accept",
+        protodata => {
+            exchange => $rv->{exchange},
+            url      => $url
+        }
+    );
 
+    my $reqid = pack( "n", 4 );
+    $reqid .= randchars(2);
+    ($reqid) = unpack( "N", $reqid );
 
-	my $reqid = pack("n", 4);
-	$reqid .= randchars(2);
-	($reqid) = unpack("N", $reqid);
-
-	$self->{chats}->{$reqid} = $rv;
-	$self->svcdo(CONNTYPE_BOS, protobit => "service_request", reqid => $reqid, protodata => {
-		type => CONNTYPE_CHAT,
-		chat => {
-			exchange => $rv->{exchange},
-			url => $url
-		}
-	});
+    $self->{chats}->{$reqid} = $rv;
+    $self->svcdo(
+        CONNTYPE_BOS,
+        protobit  => "service_request",
+        reqid     => $reqid,
+        protodata => {
+            type => CONNTYPE_CHAT,
+            chat => {
+                exchange => $rv->{exchange},
+                url      => $url
+            }
+        }
+    );
 }
 
 sub chat_decline($$) {
-	my($self, $url) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $url ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	$self->log_print(OSCAR_DBG_NOTICE, "Declining chat invite for $url.");
-	my($rv) = grep { $_->{chat_url} eq $url } values %{$self->{rv_proposals}};
-	return unless $rv;
+    $self->log_print( OSCAR_DBG_NOTICE, "Declining chat invite for $url." );
+    my ($rv) = grep { $_->{chat_url} eq $url } values %{ $self->{rv_proposals} };
+    return unless $rv;
 
-	$self->svcdo(CONNTYPE_BOS, protobit => "chat_invitation_decline", protodata => {
-		cookie => $rv->{cookie},
-		screenname => $rv->{sender},
-	});
+    $self->svcdo(
+        CONNTYPE_BOS,
+        protobit  => "chat_invitation_decline",
+        protodata => {
+            cookie     => $rv->{cookie},
+            screenname => $rv->{sender},
+        }
+    );
 
-	delete $self->{rv_proposals}->{$rv->{cookie}};
+    delete $self->{rv_proposals}->{ $rv->{cookie} };
 }
 
 =pod
@@ -1926,38 +1969,41 @@ object to get rate information on (as the C<CHAT> parameter.)
 =cut
 
 sub _rate_level($$$) {
-	my($oscar, $level, $levels) = @_;
+    my ( $oscar, $level, $levels ) = @_;
 
-	if($level <= $levels->{disconnect}) {
-		return RATE_DISCONNECT;
-	} elsif($level <= $levels->{limit}) {
-		return RATE_LIMIT;
-	} elsif($level <= $levels->{alert}) {
-		return RATE_ALERT;
-	} else {
-		return RATE_CLEAR;
-	}
+    if ( $level <= $levels->{disconnect} ) {
+        return RATE_DISCONNECT;
+    }
+    elsif ( $level <= $levels->{limit} ) {
+        return RATE_LIMIT;
+    }
+    elsif ( $level <= $levels->{alert} ) {
+        return RATE_ALERT;
+    }
+    else {
+        return RATE_CLEAR;
+    }
 }
 
 sub _rate_lookup($$;$) {
-	my($oscar, $method, $chat) = @_;
-	croak "Rate methods not supported when using OSCAR_RATE_MANAGE_NONE!" if $oscar->{rate_manage_mode} == OSCAR_RATE_MANAGE_NONE;
+    my ( $oscar, $method, $chat ) = @_;
+    croak "Rate methods not supported when using OSCAR_RATE_MANAGE_NONE!" if $oscar->{rate_manage_mode} == OSCAR_RATE_MANAGE_NONE;
 
-	print "rate_lookup $method\n";
-	my $key = $Net::OSCAR::MethodInfo::methods{$method} or return;
-	print "\tFound key\n";
-	my $conn = $chat || $oscar->connection_for_family(unpack("n", $key));
-	print "\tFound connection\n";
-	my $class = $conn->{rate_limits}->{classmap}->{$key} or return;
-	print "\tFound class\n";
-	return $conn->{rate_limits}->{$class};
+    print "rate_lookup $method\n";
+    my $key = $Net::OSCAR::MethodInfo::methods{$method} or return;
+    print "\tFound key\n";
+    my $conn = $chat || $oscar->connection_for_family( unpack( "n", $key ) );
+    print "\tFound connection\n";
+    my $class = $conn->{rate_limits}->{classmap}->{$key} or return;
+    print "\tFound class\n";
+    return $conn->{rate_limits}->{$class};
 }
 
 sub rate_level($$;$) {
-	my($oscar, $method, $chat) = @_;
-	my $rinfo = $oscar->_rate_lookup($method, $chat) or return;
+    my ( $oscar, $method, $chat ) = @_;
+    my $rinfo = $oscar->_rate_lookup( $method, $chat ) or return;
 
-	return $oscar->_rate_level($rinfo->{current_state}, $rinfo->{levels});
+    return $oscar->_rate_level( $rinfo->{current_state}, $rinfo->{levels} );
 }
 
 =pod
@@ -2009,8 +2055,8 @@ C<CurrentTimeDiff> is the difference between the current system time and C<last_
 =cut
 
 sub rate_limits($$;$) {
-	my($oscar, $method, $chat) = @_;
-	return $oscar->_rate_lookup($method, $chat);
+    my ( $oscar, $method, $chat ) = @_;
+    return $oscar->_rate_lookup( $method, $chat );
 }
 
 =pod
@@ -2023,19 +2069,19 @@ See L<"rate_level"> for more information.
 =cut
 
 sub _compute_rate($$) {
-	my($oscar, $rinfo) = @_;
+    my ( $oscar, $rinfo ) = @_;
 
-	my $level = $rinfo->{current_state};
-	my $window = $rinfo->{window_size};
-	my $timediff = (millitime() - $rinfo->{time_offset}) - $rinfo->{last_time};
-	return ($window - 1)/$window * $level + 1/$window * $timediff;
+    my $level    = $rinfo->{current_state};
+    my $window   = $rinfo->{window_size};
+    my $timediff = ( millitime() - $rinfo->{time_offset} ) - $rinfo->{last_time};
+    return ( $window - 1 ) / $window * $level + 1 / $window * $timediff;
 }
 
 sub would_make_rate_level($$;$) {
-	my($oscar, $method, $chat) = @_;
-	my $rinfo = $oscar->_rate_lookup($method, $chat) or return;
+    my ( $oscar, $method, $chat ) = @_;
+    my $rinfo = $oscar->_rate_lookup( $method, $chat ) or return;
 
-	return $oscar->_rate_level($oscar->_compute_rate($rinfo), $rinfo->{levels});
+    return $oscar->_rate_level( $oscar->_compute_rate($rinfo), $rinfo->{levels} );
 }
 
 =pod
@@ -2085,9 +2131,9 @@ The default timeout is 0.01 seconds.
 =cut
 
 sub timeout($;$) {
-	my($self, $timeout) = @_;
-	return $self->{timeout} unless $timeout;
-	$self->{timeout} = $timeout;
+    my ( $self, $timeout ) = @_;
+    return $self->{timeout} unless $timeout;
+    $self->{timeout} = $timeout;
 }
 
 =pod
@@ -2105,10 +2151,10 @@ See the L<"log"> callback for more information.
 =cut
 
 sub loglevel($;$$) {
-	my $self = shift;
-	return $self->{LOGLEVEL} unless @_;
-	$self->{LOGLEVEL} = shift;
-	$self->{SNDEBUG} = shift if @_;
+    my $self = shift;
+    return $self->{LOGLEVEL} unless @_;
+    $self->{LOGLEVEL} = shift;
+    $self->{SNDEBUG}  = shift if @_;
 }
 
 =pod
@@ -2121,18 +2167,19 @@ callback for details.
 =cut
 
 sub auth_response($$$) {
-	my($self, $digest, $pass_is_hashed) = @_;
+    my ( $self, $digest, $pass_is_hashed ) = @_;
 
-	if($pass_is_hashed) {
-		$self->{pass_is_hashed} = 1;
-	} else {
-		$self->{pass_is_hashed} = 0;
-	}
+    if ($pass_is_hashed) {
+        $self->{pass_is_hashed} = 1;
+    }
+    else {
+        $self->{pass_is_hashed} = 0;
+    }
 
-	$self->log_print(OSCAR_DBG_SIGNON, "Got authentication response - proceeding with signon");
-	$self->{auth_response} = $digest;
-	my %data = signon_tlv($self);
-	$self->svcdo(CONNTYPE_BOS, protobit => "signon", protodata => {%data});
+    $self->log_print( OSCAR_DBG_SIGNON, "Got authentication response - proceeding with signon" );
+    $self->{auth_response} = $digest;
+    my %data = signon_tlv($self);
+    $self->svcdo( CONNTYPE_BOS, protobit => "signon", protodata => {%data} );
 }
 
 =pod
@@ -2148,24 +2195,24 @@ and then call the L<signon> method on the object returned by clone.
 =cut
 
 sub clone($) {
-	my $self = shift;
-	my $clone = $self->new(@{$self->{_parameters}}); 	# Born in a science lab late one night
-								# Without a mother or a father
-								# Just a test tube and womb with a view...
+    my $self  = shift;
+    my $clone = $self->new( @{ $self->{_parameters} } );    # Born in a science lab late one night
+                                                            # Without a mother or a father
+                                                            # Just a test tube and womb with a view...
 
-	# Okay, now we don't want to just copy the reference.
-	# If we did that, changing ourself would change the clone.
-	$clone->{callbacks} = { %{$self->{callbacks}} };
+    # Okay, now we don't want to just copy the reference.
+    # If we did that, changing ourself would change the clone.
+    $clone->{callbacks} = { %{ $self->{callbacks} } };
 
-	$clone->{LOGLEVEL} = $self->{LOGLEVEL};
-	$clone->{SNDEBUG} = $self->{SNDEBUG};
-	$clone->{timeout} = $self->{timeout};
+    $clone->{LOGLEVEL} = $self->{LOGLEVEL};
+    $clone->{SNDEBUG}  = $self->{SNDEBUG};
+    $clone->{timeout}  = $self->{timeout};
 
-	foreach my $c (@{$clone->{connections}}) {
-		$c->{buffer} = \"";
-	}
+    foreach my $c ( @{ $clone->{connections} } ) {
+        $c->{buffer} = \"";
+    }
 
-	return $clone;
+    return $clone;
 }
 
 =pod
@@ -2195,9 +2242,9 @@ object.
 =cut
 
 sub findconn($$) {
-	my($self, $target) = @_;
-	my($conn) = grep { fileno($_->{socket}) == $target } @{$self->{connections}};
-	return $conn;
+    my ( $self, $target ) = @_;
+    my ($conn) = grep { fileno( $_->{socket} ) == $target } @{ $self->{connections} };
+    return $conn;
 }
 
 =pod
@@ -2211,21 +2258,21 @@ we care about writing to.  See the L<"process_connections"> method for details.
 =cut
 
 sub selector_filenos($) {
-	my $self = shift;
-	my($rin, $win) = ('', '');
+    my $self = shift;
+    my ( $rin, $win ) = ( '', '' );
 
-	foreach my $connection(@{$self->{connections}}) {
-		next unless $connection->{socket};
-		if($connection->{connected}) {
-			my $n = fileno($connection->{socket});
-			vec($rin, $n, 1) = 1;
-		}
-		if(!$connection->{connected} or $connection->{outbuff}) {
-			my $n = fileno($connection->{socket});
-			vec($win, $n, 1) = 1;
-		}
-	}
-	return ($rin, $win);
+    foreach my $connection ( @{ $self->{connections} } ) {
+        next unless $connection->{socket};
+        if ( $connection->{connected} ) {
+            my $n = fileno( $connection->{socket} );
+            vec( $rin, $n, 1 ) = 1;
+        }
+        if ( !$connection->{connected} or $connection->{outbuff} ) {
+            my $n = fileno( $connection->{socket} );
+            vec( $win, $n, 1 ) = 1;
+        }
+    }
+    return ( $rin, $win );
 }
 
 =item icon_checksum (ICONDATA)
@@ -2236,19 +2283,19 @@ C<icon_checksum> buddy info key to cache buddy icons.
 =cut
 
 sub icon_checksum($$) {
-	my($self, $icon) = @_;
+    my ( $self, $icon ) = @_;
 
-	my $sum = 0;
-	my $i = 0;
-	for($i = 0; $i+1 < length($icon); $i += 2) {
-		$sum += (ord(substr($icon, $i+1, 1)) << 8) + ord(substr($icon, $i, 1));
-	}
+    my $sum = 0;
+    my $i   = 0;
+    for ( $i = 0; $i + 1 < length($icon); $i += 2 ) {
+        $sum += ( ord( substr( $icon, $i + 1, 1 ) ) << 8 ) + ord( substr( $icon, $i, 1 ) );
+    }
 
-	$sum += ord(substr($icon, $i, 1)) if $i < length($icon);
+    $sum += ord( substr( $icon, $i, 1 ) ) if $i < length($icon);
 
-	$sum = (($sum & 0xFFFF0000) >> 16) + ($sum & 0x0000FFFF);
+    $sum = ( ( $sum & 0xFFFF0000 ) >> 16 ) + ( $sum & 0x0000FFFF );
 
-	return $sum;
+    return $sum;
 }
 
 =pod
@@ -2274,21 +2321,23 @@ Call L<"commit_buddylist"> to have the new data saved on the OSCAR server.
 =cut
 
 sub get_app_data($;$$) {
-	my($self, $group, $buddy) = @_;
+    my ( $self, $group, $buddy ) = @_;
 
-	# We don't track changes to the contents of these hashes,
-	# so mark as dirty and let BLI figure out whether anything really changed.
-	if($group and $buddy) {
-		my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
-		$bud->{__BLI_DIRTY} = 1;
-		return $bud->{data};
-	} elsif($group) {
-		my $grp = $self->{buddies}->{$group};
-		$grp->{__BLI_DIRTY} = 1;
-		return $grp->{data};
-	} else {
-		return $self->{appdata};
-	}
+    # We don't track changes to the contents of these hashes,
+    # so mark as dirty and let BLI figure out whether anything really changed.
+    if ( $group and $buddy ) {
+        my $bud = $self->{buddies}->{$group}->{members}->{$buddy};
+        $bud->{__BLI_DIRTY} = 1;
+        return $bud->{data};
+    }
+    elsif ($group) {
+        my $grp = $self->{buddies}->{$group};
+        $grp->{__BLI_DIRTY} = 1;
+        return $grp->{data};
+    }
+    else {
+        return $self->{appdata};
+    }
 }
 
 =pod
@@ -2302,9 +2351,9 @@ instead.
 =cut
 
 sub chat_invite($$$@) {
-	my($self, $chat, $msg, @who) = @_;
-	return must_be_on($self) unless $self->{is_on};
-	foreach my $who(@who) { $chat->{connection}->invite($who, $msg); }
+    my ( $self, $chat, $msg, @who ) = @_;
+    return must_be_on($self) unless $self->{is_on};
+    foreach my $who (@who) { $chat->{connection}->invite( $who, $msg ); }
 }
 
 =pod
@@ -2324,7 +2373,7 @@ instead.
 =cut
 
 sub chat_leave($$) { $_[1]->part(); }
-sub chat_send($$$) { $_[1]->chat_send($_[2]); }
+sub chat_send($$$) { $_[1]->chat_send( $_[2] ); }
 
 =pod
 
@@ -2444,96 +2493,102 @@ C<flags2>.
 =cut
 
 sub do_callback($@) {
-	my $callback = shift;
-	return unless $_[0]->{callbacks}->{$callback};
-	&{$_[0]->{callbacks}->{$callback}}(@_);
+    my $callback = shift;
+    return unless $_[0]->{callbacks}->{$callback};
+    &{ $_[0]->{callbacks}->{$callback} }(@_);
 }
-sub set_callback { $_[1]->{callbacks}->{$_[0]} = $_[2]; }
+sub set_callback { $_[1]->{callbacks}->{ $_[0] } = $_[2]; }
 
-sub callback_error(@) { do_callback("error", @_); }
-sub callback_buddy_in(@) { do_callback("buddy_in", @_); }
-sub callback_buddy_out(@) { do_callback("buddy_out", @_); }
-sub callback_im_in(@) { do_callback("im_in", @_); }
-sub callback_chat_joined(@) { do_callback("chat_joined", @_); }
-sub callback_chat_buddy_in(@) { do_callback("chat_buddy_in", @_); }
-sub callback_chat_buddy_out(@) { do_callback("chat_buddy_out", @_); }
-sub callback_chat_im_in(@) { do_callback("chat_im_in", @_); }
-sub callback_chat_invite(@) { do_callback("chat_invite", @_); }
-sub callback_buddy_info(@) { do_callback("buddy_info", @_); }
-sub callback_evil(@) { do_callback("evil", @_); }
-sub callback_chat_closed(@) { do_callback("chat_closed", @_); }
-sub callback_buddylist_error(@) { do_callback("buddylist_error", @_); }
-sub callback_buddylist_ok(@) { do_callback("buddylist_ok", @_); }
-sub callback_buddylist_changed(@) { do_callback("buddylist_changed", @_); }
-sub callback_admin_error(@) { do_callback("admin_error", @_); }
-sub callback_admin_ok(@) { do_callback("admin_ok", @_); }
-sub callback_new_buddy_icon(@) { do_callback("new_buddy_icon", @_); }
-sub callback_buddy_icon_uploaded(@) { do_callback("buddy_icon_uploaded", @_); }
-sub callback_buddy_icon_downloaded(@) { do_callback("buddy_icon_downloaded", @_); }
-sub callback_rate_alert(@) { do_callback("rate_alert", @_); }
-sub callback_signon_done(@) { do_callback("signon_done", @_); }
-sub callback_log(@) { do_callback("log", @_); }
-sub callback_typing_status(@) { do_callback("typing_status", @_); }
-sub callback_extended_status(@) { do_callback("extended_status", @_); }
-sub callback_im_ok(@) { do_callback("im_ok", @_); }
-sub callback_connection_changed(@) { do_callback("connection_changed", @_); }
-sub callback_auth_challenge(@) { do_callback("auth_challenge", @_); }
-sub callback_stealth_changed(@) { do_callback("stealth_changed", @_); }
-sub callback_snac_unknown(@) { do_callback("snac_unknown", @_); }
-sub callback_rendezvous_reject(@) { do_callback("rendezvous_reject", @_); }
-sub callback_rendezvous_accept(@) { do_callback("rendezvous_accept", @_); }
-sub callback_buddylist_in(@) { do_callback("buddylist_in", @_); }
+sub callback_error(@)                 { do_callback( "error",                 @_ ); }
+sub callback_buddy_in(@)              { do_callback( "buddy_in",              @_ ); }
+sub callback_buddy_out(@)             { do_callback( "buddy_out",             @_ ); }
+sub callback_im_in(@)                 { do_callback( "im_in",                 @_ ); }
+sub callback_chat_joined(@)           { do_callback( "chat_joined",           @_ ); }
+sub callback_chat_buddy_in(@)         { do_callback( "chat_buddy_in",         @_ ); }
+sub callback_chat_buddy_out(@)        { do_callback( "chat_buddy_out",        @_ ); }
+sub callback_chat_im_in(@)            { do_callback( "chat_im_in",            @_ ); }
+sub callback_chat_invite(@)           { do_callback( "chat_invite",           @_ ); }
+sub callback_buddy_info(@)            { do_callback( "buddy_info",            @_ ); }
+sub callback_evil(@)                  { do_callback( "evil",                  @_ ); }
+sub callback_chat_closed(@)           { do_callback( "chat_closed",           @_ ); }
+sub callback_buddylist_error(@)       { do_callback( "buddylist_error",       @_ ); }
+sub callback_buddylist_ok(@)          { do_callback( "buddylist_ok",          @_ ); }
+sub callback_buddylist_changed(@)     { do_callback( "buddylist_changed",     @_ ); }
+sub callback_admin_error(@)           { do_callback( "admin_error",           @_ ); }
+sub callback_admin_ok(@)              { do_callback( "admin_ok",              @_ ); }
+sub callback_new_buddy_icon(@)        { do_callback( "new_buddy_icon",        @_ ); }
+sub callback_buddy_icon_uploaded(@)   { do_callback( "buddy_icon_uploaded",   @_ ); }
+sub callback_buddy_icon_downloaded(@) { do_callback( "buddy_icon_downloaded", @_ ); }
+sub callback_rate_alert(@)            { do_callback( "rate_alert",            @_ ); }
+sub callback_signon_done(@)           { do_callback( "signon_done",           @_ ); }
+sub callback_log(@)                   { do_callback( "log",                   @_ ); }
+sub callback_typing_status(@)         { do_callback( "typing_status",         @_ ); }
+sub callback_extended_status(@)       { do_callback( "extended_status",       @_ ); }
+sub callback_im_ok(@)                 { do_callback( "im_ok",                 @_ ); }
+sub callback_connection_changed(@)    { do_callback( "connection_changed",    @_ ); }
+sub callback_auth_challenge(@)        { do_callback( "auth_challenge",        @_ ); }
+sub callback_stealth_changed(@)       { do_callback( "stealth_changed",       @_ ); }
+sub callback_snac_unknown(@)          { do_callback( "snac_unknown",          @_ ); }
+sub callback_rendezvous_reject(@)     { do_callback( "rendezvous_reject",     @_ ); }
+sub callback_rendezvous_accept(@)     { do_callback( "rendezvous_accept",     @_ ); }
+sub callback_buddylist_in(@)          { do_callback( "buddylist_in",          @_ ); }
 
-sub set_callback_error($\&) { set_callback("error", @_); }
-sub set_callback_buddy_in($\&) { set_callback("buddy_in", @_); }
-sub set_callback_buddy_out($\&) { set_callback("buddy_out", @_); }
-sub set_callback_im_in($\&) { set_callback("im_in", @_); }
-sub set_callback_chat_joined($\&) { set_callback("chat_joined", @_); }
-sub set_callback_chat_buddy_in($\&) { set_callback("chat_buddy_in", @_); }
-sub set_callback_chat_buddy_out($\&) { set_callback("chat_buddy_out", @_); }
-sub set_callback_chat_im_in($\&) { set_callback("chat_im_in", @_); }
-sub set_callback_chat_invite($\&) { set_callback("chat_invite", @_); }
-sub set_callback_buddy_info($\&) { set_callback("buddy_info", @_); }
-sub set_callback_evil($\&) { set_callback("evil", @_); }
-sub set_callback_chat_closed($\&) { set_callback("chat_closed", @_); }
-sub set_callback_buddylist_error($\&) { set_callback("buddylist_error", @_); }
-sub set_callback_buddylist_ok($\&) { set_callback("buddylist_ok", @_); }
-sub set_callback_buddylist_changed($\&) { set_callback("buddylist_changed", @_); }
-sub set_callback_admin_error($\&) { set_callback("admin_error", @_); }
-sub set_callback_admin_ok($\&) { set_callback("admin_ok", @_); }
+sub set_callback_error($\&)             { set_callback( "error",             @_ ); }
+sub set_callback_buddy_in($\&)          { set_callback( "buddy_in",          @_ ); }
+sub set_callback_buddy_out($\&)         { set_callback( "buddy_out",         @_ ); }
+sub set_callback_im_in($\&)             { set_callback( "im_in",             @_ ); }
+sub set_callback_chat_joined($\&)       { set_callback( "chat_joined",       @_ ); }
+sub set_callback_chat_buddy_in($\&)     { set_callback( "chat_buddy_in",     @_ ); }
+sub set_callback_chat_buddy_out($\&)    { set_callback( "chat_buddy_out",    @_ ); }
+sub set_callback_chat_im_in($\&)        { set_callback( "chat_im_in",        @_ ); }
+sub set_callback_chat_invite($\&)       { set_callback( "chat_invite",       @_ ); }
+sub set_callback_buddy_info($\&)        { set_callback( "buddy_info",        @_ ); }
+sub set_callback_evil($\&)              { set_callback( "evil",              @_ ); }
+sub set_callback_chat_closed($\&)       { set_callback( "chat_closed",       @_ ); }
+sub set_callback_buddylist_error($\&)   { set_callback( "buddylist_error",   @_ ); }
+sub set_callback_buddylist_ok($\&)      { set_callback( "buddylist_ok",      @_ ); }
+sub set_callback_buddylist_changed($\&) { set_callback( "buddylist_changed", @_ ); }
+sub set_callback_admin_error($\&)       { set_callback( "admin_error",       @_ ); }
+sub set_callback_admin_ok($\&)          { set_callback( "admin_ok",          @_ ); }
+
 sub set_callback_new_buddy_icon($\&) {
-	croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
-	set_callback("new_buddy_icon", @_);
+    croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
+    set_callback( "new_buddy_icon", @_ );
 }
+
 sub set_callback_buddy_icon_uploaded($\&) {
-	croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
-	set_callback("buddy_icon_uploaded", @_);
+    croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
+    set_callback( "buddy_icon_uploaded", @_ );
 }
+
 sub set_callback_buddy_icon_downloaded($\&) {
-	croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
-	set_callback("buddy_icon_downloaded", @_);
+    croak "This client does not support buddy icons." unless $_[0]->{capabilities}->{buddy_icons};
+    set_callback( "buddy_icon_downloaded", @_ );
 }
-sub set_callback_rate_alert($\&) { set_callback("rate_alert", @_); }
-sub set_callback_signon_done($\&) { set_callback("signon_done", @_); }
-sub set_callback_log($\&) { set_callback("log", @_); }
+sub set_callback_rate_alert($\&)  { set_callback( "rate_alert",  @_ ); }
+sub set_callback_signon_done($\&) { set_callback( "signon_done", @_ ); }
+sub set_callback_log($\&)         { set_callback( "log",         @_ ); }
+
 sub set_callback_typing_status($\&) {
-	croak "This client does not support typing status notification." unless $_[0]->{capabilities}->{typing_status};
-	set_callback("typing_status", @_);
+    croak "This client does not support typing status notification." unless $_[0]->{capabilities}->{typing_status};
+    set_callback( "typing_status", @_ );
 }
+
 sub set_callback_extended_status($\&) {
-	croak "This client does not support extended status messages." unless $_[0]->{capabilities}->{extended_status};
-	set_callback("extended_status", @_);
+    croak "This client does not support extended status messages." unless $_[0]->{capabilities}->{extended_status};
+    set_callback( "extended_status", @_ );
 }
-sub set_callback_im_ok($\&) { set_callback("im_ok", @_); }
-sub set_callback_connection_changed($\&) { set_callback("connection_changed", @_); }
-sub set_callback_auth_challenge($\&) { set_callback("auth_challenge", @_); }
-sub set_callback_stealth_changed($\&) { set_callback("stealth_changed", @_); }
-sub set_callback_snac_unknown($\&) { set_callback("snac_unknown", @_); }
-sub set_callback_rendezvous_reject($\&) { set_callback("snac_rendezvous_reject", @_); }
-sub set_callback_rendezvous_accept($\&) { set_callback("snac_rendezvous_accept", @_); }
+sub set_callback_im_ok($\&)              { set_callback( "im_ok",                  @_ ); }
+sub set_callback_connection_changed($\&) { set_callback( "connection_changed",     @_ ); }
+sub set_callback_auth_challenge($\&)     { set_callback( "auth_challenge",         @_ ); }
+sub set_callback_stealth_changed($\&)    { set_callback( "stealth_changed",        @_ ); }
+sub set_callback_snac_unknown($\&)       { set_callback( "snac_unknown",           @_ ); }
+sub set_callback_rendezvous_reject($\&)  { set_callback( "snac_rendezvous_reject", @_ ); }
+sub set_callback_rendezvous_accept($\&)  { set_callback( "snac_rendezvous_accept", @_ ); }
+
 sub set_callback_buddylist_in($\&) {
-	croak "This client does not support buddy list transfer." unless $_[0]->{capabilities}->{buddy_list_transfer};
-	set_callback("buddylist_in", @_);
+    croak "This client does not support buddy list transfer." unless $_[0]->{capabilities}->{buddy_list_transfer};
+    set_callback( "buddylist_in", @_ );
 }
 
 =pod
@@ -2887,7 +2942,6 @@ who the user has communicated with but who are not on the user's buddylist.
 
 =cut
 
-
 =pod
 
 =head1 ICQ-SPECIFIC INFORMATION
@@ -2907,14 +2961,18 @@ Requests ICQ-specific information.  See also the L<"buddy_icq_info"> callback.
 =cut
 
 sub get_icq_info($$) {
-	my($self, $uin) = @_;
+    my ( $self, $uin ) = @_;
 
-	$self->svcdo(CONNTYPE_BOS, protobit => "ICQ_meta_request", protodata => {
-		our_uin => $self->{screenname},
-		type => 2000,
-		seqno => ++$self->{bos}->{icq_seqno},
-		typedata => protoparse($self, "ICQ_meta_info_request")->pack(uin => $uin)
-	});
+    $self->svcdo(
+        CONNTYPE_BOS,
+        protobit  => "ICQ_meta_request",
+        protodata => {
+            our_uin  => $self->{screenname},
+            type     => 2000,
+            seqno    => ++$self->{bos}->{icq_seqno},
+            typedata => protoparse( $self, "ICQ_meta_info_request" )->pack( uin => $uin )
+        }
+    );
 }
 
 =pod
@@ -3098,9 +3156,8 @@ As per above.
 
 =cut
 
-sub callback_buddy_icq_info(@) { do_callback("buddy_icq_info", @_); }
-sub set_callback_buddy_icq_info($\&) { set_callback("buddy_icq_info", @_); }
-
+sub callback_buddy_icq_info(@)       { do_callback( "buddy_icq_info", @_ ); }
+sub set_callback_buddy_icq_info($\&) { set_callback( "buddy_icq_info", @_ ); }
 
 =pod
 
@@ -4008,489 +4065,498 @@ or affiliated with, Apple Computer, Inc or iChat.
 
 =cut
 
-
-
 ### Private methods
 
 sub addconn($@) {
-	my $self = shift;
-	my %data = @_;
+    my $self = shift;
+    my %data = @_;
 
-	$data{session} = $self;
-	weaken($data{session});
-	
-	my $connection;
-	my $conntype = $data{conntype};
-	$data{description} ||= $conntype;
+    $data{session} = $self;
+    weaken( $data{session} );
 
-	if($conntype == CONNTYPE_CHAT) {
-		require Net::OSCAR::Connection::Chat;
-		$connection = Net::OSCAR::Connection::Chat->new(%data);
-	} elsif($conntype == CONNTYPE_DIRECT_IN) {
-		require Net::OSCAR::Connection::Direct;
-		$connection = Net::OSCAR::Connection::Direct->new(%data);
-		$connection->listen();
-	} elsif($conntype == CONNTYPE_DIRECT_OUT) {
-		require Net::OSCAR::Connection::Direct;
-		$connection = Net::OSCAR::Connection::Direct->new(%data);
-	} elsif($conntype == CONNTYPE_SERVER) {
-		require Net::OSCAR::Connection::Server;
-		$connection = Net::OSCAR::Connection::Server->new(%data);
-	} else {
-		$connection = Net::OSCAR::Connection->new(%data);
-		# We set the connection to 1 to indicate that it is in progress but not ready for SNAC-sending yet.
-		$self->{services}->{$conntype} = 1 unless $conntype == CONNTYPE_CHAT;
-	}
+    my $connection;
+    my $conntype = $data{conntype};
+    $data{description} ||= $conntype;
 
-	if($conntype == CONNTYPE_BOS) {
-		$self->{services}->{$conntype} = $connection;
-	}
+    if ( $conntype == CONNTYPE_CHAT ) {
+        require Net::OSCAR::Connection::Chat;
+        $connection = Net::OSCAR::Connection::Chat->new(%data);
+    }
+    elsif ( $conntype == CONNTYPE_DIRECT_IN ) {
+        require Net::OSCAR::Connection::Direct;
+        $connection = Net::OSCAR::Connection::Direct->new(%data);
+        $connection->listen();
+    }
+    elsif ( $conntype == CONNTYPE_DIRECT_OUT ) {
+        require Net::OSCAR::Connection::Direct;
+        $connection = Net::OSCAR::Connection::Direct->new(%data);
+    }
+    elsif ( $conntype == CONNTYPE_SERVER ) {
+        require Net::OSCAR::Connection::Server;
+        $connection = Net::OSCAR::Connection::Server->new(%data);
+    }
+    else {
+        $connection = Net::OSCAR::Connection->new(%data);
 
-	push @{$self->{connections}}, $connection;
-	$self->callback_connection_changed($connection, $connection->{state});
-	return $connection;
+        # We set the connection to 1 to indicate that it is in progress but not ready for SNAC-sending yet.
+        $self->{services}->{$conntype} = 1 unless $conntype == CONNTYPE_CHAT;
+    }
+
+    if ( $conntype == CONNTYPE_BOS ) {
+        $self->{services}->{$conntype} = $connection;
+    }
+
+    push @{ $self->{connections} }, $connection;
+    $self->callback_connection_changed( $connection, $connection->{state} );
+    return $connection;
 }
 
 sub delconn($$) {
-	my($self, $connection) = @_;
+    my ( $self, $connection ) = @_;
 
-	return unless $self->{connections};
-	$self->callback_connection_changed($connection, "deleted") if $connection->{socket};
-	for(my $i = scalar @{$self->{connections}} - 1; $i >= 0; $i--) {
-		next unless $self->{connections}->[$i] == $connection;
-		$connection->log_print(OSCAR_DBG_NOTICE, "Closing.");
-		splice @{$self->{connections}}, $i, 1;
-		if(!$connection->{sockerr}) {
-			eval {
-				if($connection->{socket} and $connection->{conntype} != CONNTYPE_DIRECT_IN and $connection->{conntype} != CONNTYPE_DIRECT_OUT) {
-					$connection->flap_put("", FLAP_CHAN_CLOSE);
-				}
-				close $connection->{socket} if $connection->{socket};
-			};
-		} else {
-			delete $self->{services}->{$connection->{conntype}} unless $connection->{conntype} == CONNTYPE_CHAT;
+    return unless $self->{connections};
+    $self->callback_connection_changed( $connection, "deleted" ) if $connection->{socket};
+    for ( my $i = scalar @{ $self->{connections} } - 1; $i >= 0; $i-- ) {
+        next unless $self->{connections}->[$i] == $connection;
+        $connection->log_print( OSCAR_DBG_NOTICE, "Closing." );
+        splice @{ $self->{connections} }, $i, 1;
+        if ( !$connection->{sockerr} ) {
+            eval {
+                if ( $connection->{socket} and $connection->{conntype} != CONNTYPE_DIRECT_IN and $connection->{conntype} != CONNTYPE_DIRECT_OUT ) {
+                    $connection->flap_put( "", FLAP_CHAN_CLOSE );
+                }
+                close $connection->{socket} if $connection->{socket};
+            };
+        }
+        else {
+            delete $self->{services}->{ $connection->{conntype} } unless $connection->{conntype} == CONNTYPE_CHAT;
 
-			if($connection->{conntype} == CONNTYPE_BOS or ($connection->{conntype} == CONNTYPE_LOGIN and !$connection->{closing})) {
-				delete $connection->{socket};
-				return $self->crapout($connection, "Lost connection to BOS");
-			} elsif($connection->{conntype} == CONNTYPE_ADMIN) {
-				$self->callback_admin_error("all", ADMIN_ERROR_CONNREF, undef) if scalar(keys(%{$self->{adminreq}}));
-			} elsif($connection->{conntype} == CONNTYPE_CHAT) {
-				$self->callback_chat_closed($connection, "Lost connection to chat");
-			} else {
-				$self->log_print(OSCAR_DBG_NOTICE, "Closing connection ", $connection->{conntype});
-			}
-		}
-		delete $connection->{socket};
-		return 1;
-	}
-	return 0;
+            if ( $connection->{conntype} == CONNTYPE_BOS or ( $connection->{conntype} == CONNTYPE_LOGIN and !$connection->{closing} ) ) {
+                delete $connection->{socket};
+                return $self->crapout( $connection, "Lost connection to BOS" );
+            }
+            elsif ( $connection->{conntype} == CONNTYPE_ADMIN ) {
+                $self->callback_admin_error( "all", ADMIN_ERROR_CONNREF, undef ) if scalar( keys( %{ $self->{adminreq} } ) );
+            }
+            elsif ( $connection->{conntype} == CONNTYPE_CHAT ) {
+                $self->callback_chat_closed( $connection, "Lost connection to chat" );
+            }
+            else {
+                $self->log_print( OSCAR_DBG_NOTICE, "Closing connection ", $connection->{conntype} );
+            }
+        }
+        delete $connection->{socket};
+        return 1;
+    }
+    return 0;
 }
 
 sub DESTROY {
-	my $self = shift;
-	return if $Net::OSCAR::NODESTROY;
+    my $self = shift;
+    return if $Net::OSCAR::NODESTROY;
 
-	foreach my $connection(@{$self->{connections}}) {
-		next unless $connection->{socket} and not $connection->{sockerr};
-		$connection->flap_put("", FLAP_CHAN_CLOSE);
-		close $connection->{socket} if $connection->{socket};
-	}
+    foreach my $connection ( @{ $self->{connections} } ) {
+        next unless $connection->{socket} and not $connection->{sockerr};
+        $connection->flap_put( "", FLAP_CHAN_CLOSE );
+        close $connection->{socket} if $connection->{socket};
+    }
 }
 
 sub findgroup($$) {
-	my($self, $groupid) = @_;
-	my($group, $currgroup, $currid);
+    my ( $self, $groupid ) = @_;
+    my ( $group, $currgroup, $currid );
 
-	my $thegroup = undef;
+    my $thegroup = undef;
 
-	while(($group, $currgroup) = each(%{$self->{buddies}})) {
-		next if $group eq "__BLI_DIRTY";
-		next unless exists($currgroup->{groupid}) and $groupid == $currgroup->{groupid};
-		next if $currgroup->{__BLI_DELETED};
-		$thegroup = $group;
-		hash_iter_reset(\%{$self->{buddies}}); # Reset the iterator
-		last;
-	}
-	return $thegroup;
+    while ( ( $group, $currgroup ) = each( %{ $self->{buddies} } ) ) {
+        next if $group eq "__BLI_DIRTY";
+        next unless exists( $currgroup->{groupid} ) and $groupid == $currgroup->{groupid};
+        next if $currgroup->{__BLI_DELETED};
+        $thegroup = $group;
+        hash_iter_reset( \%{ $self->{buddies} } );    # Reset the iterator
+        last;
+    }
+    return $thegroup;
 }
 
 sub findbuddy_byid($$$) {
-	my($self, $buddies, $bid) = @_;
+    my ( $self, $buddies, $bid ) = @_;
 
-	while(my($buddy, $value) = each(%$buddies)) {
-		if($value->{buddyid} == $bid and !$value->{__BLI_DELETED}) {
-			hash_iter_reset(\%$buddies); # reset the iterator
-			return $buddy;
-		}
-	}
-	return undef;
+    while ( my ( $buddy, $value ) = each(%$buddies) ) {
+        if ( $value->{buddyid} == $bid and !$value->{__BLI_DELETED} ) {
+            hash_iter_reset( \%$buddies );    # reset the iterator
+            return $buddy;
+        }
+    }
+    return undef;
 }
 
 sub newid($;$) {
-	my($self, $group) = @_;
-	my $id = 4;
-	my %ids = ();
+    my ( $self, $group ) = @_;
+    my $id  = 4;
+    my %ids = ();
 
-	if($group) {
-		%ids = map { $_->{buddyid} => 1 } values %$group;
-		do { ++$id; } while($ids{$id}) or $id < 4;
-	} else {
-		do { $id = ++$self->{nextid}->{__GROUPID__}; } while($self->findgroup($id));
-	}
-	return $id;
+    if ($group) {
+        %ids = map { $_->{buddyid} => 1 } values %$group;
+        do { ++$id; } while ( $ids{$id} ) or $id < 4;
+    }
+    else {
+        do { $id = ++$self->{nextid}->{__GROUPID__}; } while ( $self->findgroup($id) );
+    }
+    return $id;
 }
 
 sub capabilities($) {
-	my $self = shift;
+    my $self = shift;
 
-	my @caps;
+    my @caps;
 
-	push @caps, OSCAR_CAPS()->{chat}->{value}, OSCAR_CAPS()->{interoperate}->{value};
-	push @caps, OSCAR_CAPS()->{extstatus}->{value} if $self->{capabilities}->{extended_status};
-	push @caps, OSCAR_CAPS()->{buddyicon}->{value} if $self->{capabilities}->{buddy_icons};
-	push @caps, OSCAR_CAPS()->{filexfer}->{value} if $self->{capabilities}->{file_transfer};
-	push @caps, OSCAR_CAPS()->{fileshare}->{value} if $self->{capabilities}->{file_sharing};
-	push @caps, OSCAR_CAPS()->{sendlist}->{value} if $self->{capabilities}->{buddy_list_transfer};
+    push @caps, OSCAR_CAPS()->{chat}->{value}, OSCAR_CAPS()->{interoperate}->{value};
+    push @caps, OSCAR_CAPS()->{extstatus}->{value} if $self->{capabilities}->{extended_status};
+    push @caps, OSCAR_CAPS()->{buddyicon}->{value} if $self->{capabilities}->{buddy_icons};
+    push @caps, OSCAR_CAPS()->{filexfer}->{value}  if $self->{capabilities}->{file_transfer};
+    push @caps, OSCAR_CAPS()->{fileshare}->{value} if $self->{capabilities}->{file_sharing};
+    push @caps, OSCAR_CAPS()->{sendlist}->{value}  if $self->{capabilities}->{buddy_list_transfer};
 
-	return \@caps;
+    return \@caps;
 }
 
 sub mod_permit($$$@) {
-	my($self, $action, $group, @buddies) = @_;
+    my ( $self, $action, $group, @buddies ) = @_;
 
-	return must_be_on($self) unless $self->{is_on};
-	if($action == MODBL_ACTION_ADD) {
-		foreach my $buddy(@buddies) {
-			next if exists($self->{$group}->{$buddy});
-			$self->{$group}->{$buddy}->{buddyid} = $self->newid($self->{$group});
-		}
-	} else {
-		foreach my $buddy(@buddies) {
-			delete $self->{$group}->{$buddy};
-		}
-	}
+    return must_be_on($self) unless $self->{is_on};
+    if ( $action == MODBL_ACTION_ADD ) {
+        foreach my $buddy (@buddies) {
+            next if exists( $self->{$group}->{$buddy} );
+            $self->{$group}->{$buddy}->{buddyid} = $self->newid( $self->{$group} );
+        }
+    }
+    else {
+        foreach my $buddy (@buddies) {
+            delete $self->{$group}->{$buddy};
+        }
+    }
 }
 
 sub mod_buddylist($$$$;@) {
-	my($self, $action, $what, $group, @buddies) = @_;
-	return must_be_on($self) unless $self->{is_on};
+    my ( $self, $action, $what, $group, @buddies ) = @_;
+    return must_be_on($self) unless $self->{is_on};
 
-	if($group eq "__BLI_DIRTY") {
-		send_error($self, $self->{bos}, "Invalid group name", "__BLI_DIRTY is a reserved group name.", 0);
-		return;
-	}
+    if ( $group eq "__BLI_DIRTY" ) {
+        send_error( $self, $self->{bos}, "Invalid group name", "__BLI_DIRTY is a reserved group name.", 0 );
+        return;
+    }
 
-	@buddies = ($group) if $what == MODBL_WHAT_GROUP;
+    @buddies = ($group) if $what == MODBL_WHAT_GROUP;
 
-	if($what == MODBL_WHAT_GROUP and $action == MODBL_ACTION_ADD) {
-		return if exists $self->{buddies}->{$group} and !$self->{buddies}->{$group}->{__BLI_DELETED};
+    if ( $what == MODBL_WHAT_GROUP and $action == MODBL_ACTION_ADD ) {
+        return if exists $self->{buddies}->{$group} and !$self->{buddies}->{$group}->{__BLI_DELETED};
 
-		$self->{buddies}->{__BLI_DIRTY} = 1;
+        $self->{buddies}->{__BLI_DIRTY} = 1;
 
-		# Maybe group was deleted and then recreated
-		if(exists $self->{buddies}->{$group}) {
-			my $grp = $self->{buddies}->{$group};
-			$grp->{__BLI_DIRTY} = 1;
-			$grp->{__BLI_DELETED} = 0;
-			$grp->{data} = tlv();
-			$_->{__BLI_DELETED} = 1 foreach values %{$grp->{members}};
-		} else {
-			$self->{buddies}->{$group} = {
-				groupid => $self->newid(),
-				members => bltie(),
-				data => tlv(),
-				__BLI_DIRTY => 1,
-				__BLI_DELETED => 0,
-			};
-		}
-	} elsif($what == MODBL_WHAT_GROUP and $action == MODBL_ACTION_DEL) {
-		return unless exists $self->{buddies}->{$group};
-		$self->{buddies}->{__BLI_DIRTY} = 1;
-		$self->{buddies}->{$group}->{__BLI_DELETED} = 1;
-	} elsif($what == MODBL_WHAT_BUDDY and $action == MODBL_ACTION_ADD) {
+        # Maybe group was deleted and then recreated
+        if ( exists $self->{buddies}->{$group} ) {
+            my $grp = $self->{buddies}->{$group};
+            $grp->{__BLI_DIRTY}   = 1;
+            $grp->{__BLI_DELETED} = 0;
+            $grp->{data}          = tlv();
+            $_->{__BLI_DELETED}   = 1 foreach values %{ $grp->{members} };
+        }
+        else {
+            $self->{buddies}->{$group} = {
+                groupid       => $self->newid(),
+                members       => bltie(),
+                data          => tlv(),
+                __BLI_DIRTY   => 1,
+                __BLI_DELETED => 0,
+            };
+        }
+    }
+    elsif ( $what == MODBL_WHAT_GROUP and $action == MODBL_ACTION_DEL ) {
+        return unless exists $self->{buddies}->{$group};
+        $self->{buddies}->{__BLI_DIRTY} = 1;
+        $self->{buddies}->{$group}->{__BLI_DELETED} = 1;
+    }
+    elsif ( $what == MODBL_WHAT_BUDDY and $action == MODBL_ACTION_ADD ) {
 
-		$self->mod_buddylist(MODBL_ACTION_ADD, MODBL_WHAT_GROUP, $group) unless
-			exists $self->{buddies}->{$group} and
-			not $self->{buddies}->{$group}->{__BLI_DELETED};
+        $self->mod_buddylist( MODBL_ACTION_ADD, MODBL_WHAT_GROUP, $group )
+          unless exists $self->{buddies}->{$group}
+          and not $self->{buddies}->{$group}->{__BLI_DELETED};
 
-		my $grp = $self->{buddies}->{$group};
-		@buddies = grep {
-			not (
-				exists $grp->{members}->{$_} and
-				not $grp->{members}->{$_}->{__BLI_DELETED}
-			)
-		} @buddies;
-		return unless @buddies;
+        my $grp = $self->{buddies}->{$group};
+        @buddies = grep { not( exists $grp->{members}->{$_} and not $grp->{members}->{$_}->{__BLI_DELETED} ) } @buddies;
+        return unless @buddies;
 
-		$grp->{__BLI_DIRTY} = 1;
+        $grp->{__BLI_DIRTY} = 1;
 
-		foreach my $buddy(@buddies) {
-			# Buddy may have been deleted and recreated
-			if(exists($grp->{members}->{$buddy})) {
-				my $bud = $grp->{members}->{$buddy};
-				$bud->{__BLI_DIRTY} = 1;
-				$bud->{__BLI_DELETED} = 0;
-				$bud->{data} = tlv();
-				$bud->{comment} = undef;
-				$bud->{alias} = undef;
-			} else {
-				$grp->{members}->{$buddy} = {
-					buddyid => $self->newid($grp->{members}),
-					screenname => Net::OSCAR::Screenname->new($buddy),
-					data => tlv(),
-					online => 0,
-					comment => undef,
-					alias => undef,
-					__BLI_DIRTY => 1,
-					__BLI_DELETED => 0,
-				};
-			}
-		}
-	} elsif($what == MODBL_WHAT_BUDDY and $action == MODBL_ACTION_DEL) {
-		return unless exists $self->{buddies}->{$group};
+        foreach my $buddy (@buddies) {
 
-		my $grp = $self->{buddies}->{$group};
-		@buddies = grep {
-			exists $grp->{members}->{$_} and
-			not $grp->{members}->{$_}->{__BLI_DELETED}
-		} @buddies;
-		return unless @buddies;
+            # Buddy may have been deleted and recreated
+            if ( exists( $grp->{members}->{$buddy} ) ) {
+                my $bud = $grp->{members}->{$buddy};
+                $bud->{__BLI_DIRTY}   = 1;
+                $bud->{__BLI_DELETED} = 0;
+                $bud->{data}          = tlv();
+                $bud->{comment}       = undef;
+                $bud->{alias}         = undef;
+            }
+            else {
+                $grp->{members}->{$buddy} = {
+                    buddyid       => $self->newid( $grp->{members} ),
+                    screenname    => Net::OSCAR::Screenname->new($buddy),
+                    data          => tlv(),
+                    online        => 0,
+                    comment       => undef,
+                    alias         => undef,
+                    __BLI_DIRTY   => 1,
+                    __BLI_DELETED => 0,
+                };
+            }
+        }
+    }
+    elsif ( $what == MODBL_WHAT_BUDDY and $action == MODBL_ACTION_DEL ) {
+        return unless exists $self->{buddies}->{$group};
 
-		$grp->{__BLI_DIRTY} = 1;
+        my $grp = $self->{buddies}->{$group};
+        @buddies = grep { exists $grp->{members}->{$_} and not $grp->{members}->{$_}->{__BLI_DELETED} } @buddies;
+        return unless @buddies;
 
-		foreach my $buddy(@buddies) {
-			$grp->{members}->{$buddy}->{__BLI_DELETED} = 1;
-		}
-		$self->mod_buddylist(MODBL_ACTION_DEL, MODBL_WHAT_GROUP, $group) unless scalar
-			grep { not $grp->{members}->{$_}->{__BLI_DELETED} }
-			keys %{$grp->{members}};
-	}
+        $grp->{__BLI_DIRTY} = 1;
+
+        foreach my $buddy (@buddies) {
+            $grp->{members}->{$buddy}->{__BLI_DELETED} = 1;
+        }
+        $self->mod_buddylist( MODBL_ACTION_DEL, MODBL_WHAT_GROUP, $group ) unless scalar grep { not $grp->{members}->{$_}->{__BLI_DELETED} }
+          keys %{ $grp->{members} };
+    }
 }
 
 sub postprocess_userinfo($$) {
-	my($self, $userinfo) = @_;
+    my ( $self, $userinfo ) = @_;
 
-	Net::OSCAR::Screenname->new(\$userinfo->{screenname});
+    Net::OSCAR::Screenname->new( \$userinfo->{screenname} );
 
-	if($userinfo->{idle}) {
-		$userinfo->{idle} *= 60;
-		$userinfo->{idle_since} = time() - $userinfo->{idle};
-	}
-	$userinfo->{evil} /= 10 if exists($userinfo->{evil});
-	if(exists($userinfo->{flags})) {
-		my $flags = $userinfo->{flags};
-		$userinfo->{trial} = $flags & 0x1;
-		$userinfo->{admin} = $flags & 0x2;
-		$userinfo->{aol} = $flags & 0x4;
-		$userinfo->{pay} = $flags & 0x8;
-		$userinfo->{free} = $flags & 0x10;
-		$userinfo->{away} = $flags & 0x20;
-		$userinfo->{mobile} = $flags & 0x80;
-	}
+    if ( $userinfo->{idle} ) {
+        $userinfo->{idle} *= 60;
+        $userinfo->{idle_since} = time() - $userinfo->{idle};
+    }
+    $userinfo->{evil} /= 10 if exists( $userinfo->{evil} );
+    if ( exists( $userinfo->{flags} ) ) {
+        my $flags = $userinfo->{flags};
+        $userinfo->{trial}  = $flags & 0x1;
+        $userinfo->{admin}  = $flags & 0x2;
+        $userinfo->{aol}    = $flags & 0x4;
+        $userinfo->{pay}    = $flags & 0x8;
+        $userinfo->{free}   = $flags & 0x10;
+        $userinfo->{away}   = $flags & 0x20;
+        $userinfo->{mobile} = $flags & 0x80;
+    }
 
-	if(exists($userinfo->{capabilities})) {
-		my $capabilities = delete $userinfo->{capabilities};
-		foreach my $capability (@$capabilities) {
-			$self->log_print(OSCAR_DBG_DEBUG, "Got a capability.");
-			if(OSCAR_CAPS_INVERSE()->{$capability}) {
-				my $capname = OSCAR_CAPS_INVERSE()->{$capability};
-				$self->log_print(OSCAR_DBG_DEBUG, "Got capability $capname.");
-				$userinfo->{capabilities}->{$capname} = OSCAR_CAPS()->{$capname}->{description};
-			} else {
-				$self->log_print_cond(OSCAR_DBG_INFO, sub { "Unknown capability: ", hexdump($capability) });
-			}
-		}
-	}
-		
-	if(exists($userinfo->{icon_md5sum})) {
-		if(!exists($self->{userinfo}->{$userinfo->{screenname}})
-		   or !exists($self->{userinfo}->{$userinfo->{screenname}}->{icon_md5sum})
-		   or $self->{userinfo}->{$userinfo->{screenname}}->{icon_md5sum} ne $userinfo->{icon_md5sum}) {
-			$self->callback_new_buddy_icon($userinfo->{screenname}, $userinfo);
-		}
-	}
+    if ( exists( $userinfo->{capabilities} ) ) {
+        my $capabilities = delete $userinfo->{capabilities};
+        foreach my $capability (@$capabilities) {
+            $self->log_print( OSCAR_DBG_DEBUG, "Got a capability." );
+            if ( OSCAR_CAPS_INVERSE()->{$capability} ) {
+                my $capname = OSCAR_CAPS_INVERSE()->{$capability};
+                $self->log_print( OSCAR_DBG_DEBUG, "Got capability $capname." );
+                $userinfo->{capabilities}->{$capname} = OSCAR_CAPS()->{$capname}->{description};
+            }
+            else {
+                $self->log_print_cond( OSCAR_DBG_INFO, sub { "Unknown capability: ", hexdump($capability) } );
+            }
+        }
+    }
+
+    if ( exists( $userinfo->{icon_md5sum} ) ) {
+        if (   !exists( $self->{userinfo}->{ $userinfo->{screenname} } )
+            or !exists( $self->{userinfo}->{ $userinfo->{screenname} }->{icon_md5sum} )
+            or $self->{userinfo}->{ $userinfo->{screenname} }->{icon_md5sum} ne $userinfo->{icon_md5sum} ) {
+            $self->callback_new_buddy_icon( $userinfo->{screenname}, $userinfo );
+        }
+    }
 }
 
 sub send_message($$$$;$$) {
-	my($self, $recipient, $channel, $body, $flags2, $cookie) = @_;
-	$flags2 ||= 0;
+    my ( $self, $recipient, $channel, $body, $flags2, $cookie ) = @_;
+    $flags2 ||= 0;
 
-	my $reqid = (8<<16) | (unpack("n", randchars(2)))[0];
-	my %protodata = (
-		cookie => $cookie ? $cookie : randchars(8),
-		channel => $channel,
-		screenname => $recipient,
-		message_body => $body,
-	);
-	$self->svcdo(CONNTYPE_BOS, reqdata => $recipient, reqid => $reqid, protobit => "outgoing_IM", protodata => \%protodata, flags2 => $flags2);
+    my $reqid     = ( 8 << 16 ) | ( unpack( "n", randchars(2) ) )[0];
+    my %protodata = (
+        cookie       => $cookie ? $cookie : randchars(8),
+        channel      => $channel,
+        screenname   => $recipient,
+        message_body => $body,
+    );
+    $self->svcdo( CONNTYPE_BOS, reqdata => $recipient, reqid => $reqid, protobit => "outgoing_IM", protodata => \%protodata, flags2 => $flags2 );
 
-	return ($reqid, $protodata{cookie});
+    return ( $reqid, $protodata{cookie} );
 }
 
 sub rendezvous_revise($$;$) {
-	my($self, $cookie, $ip) = @_;
-	return unless exists($self->{rv_proposals}->{$cookie});
-	my $proposal = $self->{rv_proposals}->{$cookie};
+    my ( $self, $cookie, $ip ) = @_;
+    return unless exists( $self->{rv_proposals}->{$cookie} );
+    my $proposal = $self->{rv_proposals}->{$cookie};
 
-	if($proposal->{connection}) {
-		$self->delconn($proposal->{connection});
-		delete $proposal->{connection};
-	}
+    if ( $proposal->{connection} ) {
+        $self->delconn( $proposal->{connection} );
+        delete $proposal->{connection};
+    }
 
-	if(!$ip) {
-		croak "OSCAR server FT proxy not yet supported!";
-	}
+    if ( !$ip ) {
+        croak "OSCAR server FT proxy not yet supported!";
+    }
 
-	my $connection = $self->addconn(conntype => CONNTYPE_DIRECT_IN);
-	my($port) = sockaddr_in(getsockname($connection->{socket}));
+    my $connection = $self->addconn( conntype => CONNTYPE_DIRECT_IN );
+    my ($port) = sockaddr_in( getsockname( $connection->{socket} ) );
 
-	my %protodata = (
-		capability => OSCAR_CAPS()->{filexfer}->{value},
-		cookie => $proposal->{cookie},
-		status => "propose",
-		client_1_ip => $self->{ip},
-		client_2_ip => $self->{ip},
-		port => $port,
-	);
-	$proposal->{connection} = $connection;
-	$proposal->{ft_state} = "listening";
-	$proposal->{accepted} = 0;
-	$proposal->{tried_listen} = 1;
+    my %protodata = (
+        capability  => OSCAR_CAPS()->{filexfer}->{value},
+        cookie      => $proposal->{cookie},
+        status      => "propose",
+        client_1_ip => $self->{ip},
+        client_2_ip => $self->{ip},
+        port        => $port,
+    );
+    $proposal->{connection}   = $connection;
+    $proposal->{ft_state}     = "listening";
+    $proposal->{accepted}     = 0;
+    $proposal->{tried_listen} = 1;
 
-	my($req_id) = $self->send_message($proposal->{peer}, 2, protoparse($self, "rendezvous_IM")->pack(%protodata), 0, $cookie);
+    my ($req_id) = $self->send_message( $proposal->{peer}, 2, protoparse( $self, "rendezvous_IM" )->pack(%protodata), 0, $cookie );
 }
 
 sub rendezvous_proxy_host($) {
-	return "ars.oscar.aol.com";
+    return "ars.oscar.aol.com";
 }
 
 sub rendezvous_negotiate($$) {
-	my($self, $cookie) = @_;
-	return unless exists($self->{rv_proposals}->{$cookie});
-	my $proposal = $self->{rv_proposals}->{$cookie};
+    my ( $self, $cookie ) = @_;
+    return unless exists( $self->{rv_proposals}->{$cookie} );
+    my $proposal = $self->{rv_proposals}->{$cookie};
 
-	if($proposal->{tried_connect} or !$proposal->{ip} or $proposal->{ip} eq "0.0.0.0" or $proposal->{ip} eq "255.255.255.255") {
-		$self->log_print(OSCAR_DBG_DEBUG, "Negotiating rendezvous.");
+    if ( $proposal->{tried_connect} or !$proposal->{ip} or $proposal->{ip} eq "0.0.0.0" or $proposal->{ip} eq "255.255.255.255" ) {
+        $self->log_print( OSCAR_DBG_DEBUG, "Negotiating rendezvous." );
 
-		# If we haven't tried hosting the connection and it 
-		# doesn't look like we're behind NAT, or we have
-		# a designated file transfer IP, try hosting.
-		# Otherwise, use the proxy.
-		#
-		if(!$proposal->{tried_listen} and
-		  $self->{ft_ip} or ($self->{ip} and $self->{bos}->local_ip eq $self->{ip})
-		) {
-			$self->log_print(OSCAR_DBG_DEBUG, "Hosting.");
-			$self->rendezvous_revise($cookie, $self->{ft_ip} || $self->{ip});
-			$proposal->{using_proxy} = 0;
-			$proposal->{tried_listen} = 1;
-			$proposal->{ft_state} = "listening";
-			return;
-		} elsif(!$proposal->{tried_proxy}) {
-			$self->log_print(OSCAR_DBG_DEBUG, "Using proxy.");
-			$proposal->{using_proxy} = 1;
-			$proposal->{tried_proxy} = 1;
-			$proposal->{ft_state} = "proxy_connect";
-			$proposal->{ip} = $self->rendezvous_proxy_host();
-		} else {
-			$self->rendezvous_reject($cookie);
-			$self->log_printf(OSCAR_DBG_WARN, "Couldn't figure out how to connect for file transfer (%s, %s).", $proposal->{ip}, $proposal->{proxy});
-			return;
-		}
-	} else {
-		$proposal->{using_proxy} = 0;
-		$proposal->{tried_connect} = 1;
-		$proposal->{ft_state} = "connecting";
-	}
+        # If we haven't tried hosting the connection and it
+        # doesn't look like we're behind NAT, or we have
+        # a designated file transfer IP, try hosting.
+        # Otherwise, use the proxy.
+        #
+        if ( !$proposal->{tried_listen} and $self->{ft_ip}
+            or ( $self->{ip} and $self->{bos}->local_ip eq $self->{ip} ) ) {
+            $self->log_print( OSCAR_DBG_DEBUG, "Hosting." );
+            $self->rendezvous_revise( $cookie, $self->{ft_ip} || $self->{ip} );
+            $proposal->{using_proxy}  = 0;
+            $proposal->{tried_listen} = 1;
+            $proposal->{ft_state}     = "listening";
+            return;
+        }
+        elsif ( !$proposal->{tried_proxy} ) {
+            $self->log_print( OSCAR_DBG_DEBUG, "Using proxy." );
+            $proposal->{using_proxy} = 1;
+            $proposal->{tried_proxy} = 1;
+            $proposal->{ft_state}    = "proxy_connect";
+            $proposal->{ip}          = $self->rendezvous_proxy_host();
+        }
+        else {
+            $self->rendezvous_reject($cookie);
+            $self->log_printf( OSCAR_DBG_WARN, "Couldn't figure out how to connect for file transfer (%s, %s).", $proposal->{ip}, $proposal->{proxy} );
+            return;
+        }
+    }
+    else {
+        $proposal->{using_proxy}   = 0;
+        $proposal->{tried_connect} = 1;
+        $proposal->{ft_state}      = "connecting";
+    }
 
-	return 1;
+    return 1;
 }
 
 sub rendezvous_accept($$) {
-	my($self, $cookie) = @_;
-	return unless exists($self->{rv_proposals}->{$cookie});
-	my $proposal = $self->{rv_proposals}->{$cookie};
+    my ( $self, $cookie ) = @_;
+    return unless exists( $self->{rv_proposals}->{$cookie} );
+    my $proposal = $self->{rv_proposals}->{$cookie};
 
-	return unless $self->rendezvous_negotiate($cookie);
+    return unless $self->rendezvous_negotiate($cookie);
 
-	$self->log_printf(OSCAR_DBG_INFO, "Establishing rendezvous connection to %s:%d", $proposal->{ip}, $proposal->{port});
-	$proposal->{ip} .= ":" . $proposal->{port} if $proposal->{port};
-	my $newconn = $self->addconn(
-		conntype => CONNTYPE_DIRECT_OUT,
-		peer => $proposal->{ip},
-		description => "transfer of files: " . join(", ", @{$proposal->{filenames}}),
-		rv => $proposal,
-	);
-	$proposal->{connection} = $newconn;
+    $self->log_printf( OSCAR_DBG_INFO, "Establishing rendezvous connection to %s:%d", $proposal->{ip}, $proposal->{port} );
+    $proposal->{ip} .= ":" . $proposal->{port} if $proposal->{port};
+    my $newconn = $self->addconn(
+        conntype    => CONNTYPE_DIRECT_OUT,
+        peer        => $proposal->{ip},
+        description => "transfer of files: " . join( ", ", @{ $proposal->{filenames} } ),
+        rv          => $proposal,
+    );
+    $proposal->{connection} = $newconn;
 }
 
 sub rendezvous_reject($$) {
-	my($self, $cookie) = @_;
+    my ( $self, $cookie ) = @_;
 
-	return unless exists($self->{rv_proposals}->{$cookie});
-	my $proposal = delete $self->{rv_proposals}->{$cookie};
+    return unless exists( $self->{rv_proposals}->{$cookie} );
+    my $proposal = delete $self->{rv_proposals}->{$cookie};
 
-	my %protodata;
-	$protodata{status} = "cancel";
-	$protodata{cookie} = $cookie;
-	$protodata{capability} = OSCAR_CAPS()->{$proposal->{type}} ? OSCAR_CAPS()->{$proposal->{type}}->{value} : $proposal->{type};
+    my %protodata;
+    $protodata{status}     = "cancel";
+    $protodata{cookie}     = $cookie;
+    $protodata{capability} = OSCAR_CAPS()->{ $proposal->{type} } ? OSCAR_CAPS()->{ $proposal->{type} }->{value} : $proposal->{type};
 
-	return $self->send_message($proposal->{sender}, 2, protoparse($self, "rendezvous_IM")->pack(%protodata));
+    return $self->send_message( $proposal->{sender}, 2, protoparse( $self, "rendezvous_IM" )->pack(%protodata) );
 }
 
 sub svcdo($$%) {
-	my($self, $service, %data) = @_;
+    my ( $self, $service, %data ) = @_;
 
-	if($self->{services}->{$service} and ref($self->{services}->{$service})) {
-		$self->{services}->{$service}->proto_send(%data);
-	} else {
-		push @{$self->{svcqueues}->{$service}}, \%data;
-		$self->svcreq($service) unless $self->{services}->{$service};
-	}
+    if ( $self->{services}->{$service} and ref( $self->{services}->{$service} ) ) {
+        $self->{services}->{$service}->proto_send(%data);
+    }
+    else {
+        push @{ $self->{svcqueues}->{$service} }, \%data;
+        $self->svcreq($service) unless $self->{services}->{$service};
+    }
 }
 
 sub svcreq($$;@) {
-        my($self, $svctype, @extradata) = @_;
+    my ( $self, $svctype, @extradata ) = @_;
 
-        $self->log_print(OSCAR_DBG_INFO, "Sending service request for servicetype $svctype.");
-        $self->svcdo(CONNTYPE_BOS, protobit => "service_request", protodata => {type => $svctype, @extradata});
+    $self->log_print( OSCAR_DBG_INFO, "Sending service request for servicetype $svctype." );
+    $self->svcdo( CONNTYPE_BOS, protobit => "service_request", protodata => { type => $svctype, @extradata } );
 }
 
 sub crapout($$$;$) {
-	my($self, $connection, $reason, $errno) = @_;
-	send_error($self, $connection, $errno || 0, $reason, 1);
-	$self->signoff();
+    my ( $self, $connection, $reason, $errno ) = @_;
+    send_error( $self, $connection, $errno || 0, $reason, 1 );
+    $self->signoff();
 }
 
 sub must_be_on($) {
-	my $self = shift;
-	send_error($self, $self->{services}->{0+CONNTYPE_BOS}, 0, "You have not finished signing on.", 0);
+    my $self = shift;
+    send_error( $self, $self->{services}->{ 0 + CONNTYPE_BOS }, 0, "You have not finished signing on.", 0 );
 }
 
-
 sub server($%) {
-	my $self = shift;
-	my %data = @_;
-	$self->{$_} = $data{$_} foreach keys %data;
-	$self->addconn(conntype => CONNTYPE_SERVER);
+    my $self = shift;
+    my %data = @_;
+    $self->{$_} = $data{$_} foreach keys %data;
+    $self->addconn( conntype => CONNTYPE_SERVER );
 }
 
 sub connection_for_family($$) {
-	my($self, $family) = @_;
+    my ( $self, $family ) = @_;
 
-	my $bos = $self->{services}->{0+CONNTYPE_BOS};
-	if($bos->{families}->{$family}) {
-		return $bos;
-	}
+    my $bos = $self->{services}->{ 0 + CONNTYPE_BOS };
+    if ( $bos->{families}->{$family} ) {
+        return $bos;
+    }
 
-	foreach my $connection (@{$self->{session}->{connections}}) {
-		next unless $connection->{families}->{$family};
-		$connection->log_print(OSCAR_DBG_WARN, "Found connection for unsupported SNAC.");
-		return $connection;
-	}
+    foreach my $connection ( @{ $self->{session}->{connections} } ) {
+        next unless $connection->{families}->{$family};
+        $connection->log_print( OSCAR_DBG_WARN, "Found connection for unsupported SNAC." );
+        return $connection;
+    }
 
-	return;
+    return;
 }
 
 1;
