@@ -60,7 +60,7 @@ sub load_xml(;$) {
 			close(XMLCACHE);
 
 			my $xmlparse;
-			eval $xmlcache or die "Coldn't load xml cache: $@\n";
+			eval $xmlcache or die "Couldn't load xml cache: $@\n";
 			die $@ if $@;
 			return parse_xml($xmlparse);
 		}
