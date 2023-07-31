@@ -43,7 +43,6 @@ plan(tests => scalar(@tests) + 2);
 
 require_ok("Net::OSCAR");
 require_ok("Net::OSCAR::Constants");
-Net::OSCAR::Constant->import(":all");
 
 foreach my $file(@tests) {
 	next if $file eq "." or $file eq "..";
