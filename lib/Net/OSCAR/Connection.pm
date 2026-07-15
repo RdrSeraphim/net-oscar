@@ -70,7 +70,10 @@ sub unpause($) {
 
     $self->log_print( OSCAR_DBG_WARN, "Flushing pause queue" );
     foreach my $item ( @{ $self->{pause_queue} } ) {
-        $self->log_printf( OSCAR_DBG_WARN, "Flushing SNAC 0x%04X/0x%04X", $item->{family}, $item->{subtype} );
+        $self->log_printf(
+            OSCAR_DBG_WARN,  "Flushing SNAC 0x%04X/0x%04X",
+            $item->{family}, $item->{subtype}
+        );
         $self->snac_put(%$item);
     }
     $self->log_print( OSCAR_DBG_WARN, "Pause queue flushed" );
@@ -82,11 +85,13 @@ sub proto_send($%) {
     my ( $self, %data ) = @_;
     $data{protodata} ||= {};
 
-    my %snac = protobit_to_snac( $data{protobit} );    # or croak "Couldn't find protobit $data{protobit}";
+    my %snac = protobit_to_snac( $data{protobit} )
+      ;    # or croak "Couldn't find protobit $data{protobit}";
     confess "BAD SELF!" unless ref($self);
     confess "BAD DATA!" unless ref( $data{protodata} );
 
-    $snac{data} = protoparse( $self->{session}, $data{protobit} )->pack( %{ $data{protodata} } );
+    $snac{data} = protoparse( $self->{session}, $data{protobit} )
+      ->pack( %{ $data{protodata} } );
     foreach (qw(reqdata reqid flags1 flags2)) {
         $snac{$_} = $data{$_} if exists( $data{$_} );
     }
@@ -97,17 +102,21 @@ sub proto_send($%) {
         }
 
         if ( $self->{paused} and !$data{nopause} ) {
-            $self->log_printf( OSCAR_DBG_WARN, "Adding SNAC 0x%04X/0x%04X to pause queue", $snac{family}, $snac{subtype} );
+            $self->log_printf( OSCAR_DBG_WARN,
+                "Adding SNAC 0x%04X/0x%04X to pause queue",
+                $snac{family}, $snac{subtype} );
             push @{ $self->{pause_queue} }, \%snac;
         }
         else {
-            $self->log_printf( OSCAR_DBG_DEBUG, "Put SNAC 0x%04X/0x%04X: %s", $snac{family}, $snac{subtype}, $data{protobit} );
+            $self->log_printf( OSCAR_DBG_DEBUG, "Put SNAC 0x%04X/0x%04X: %s",
+                $snac{family}, $snac{subtype}, $data{protobit} );
             $self->snac_put(%snac);
         }
     }
     else {
         $snac{channel} ||= 0 + FLAP_CHAN_SNAC;
-        $self->log_printf( OSCAR_DBG_DEBUG, "Putting raw FLAP: %s", $data{protobit} );
+        $self->log_printf( OSCAR_DBG_DEBUG, "Putting raw FLAP: %s",
+            $data{protobit} );
         $self->flap_put( $snac{data}, $snac{channel} );
     }
 }
@@ -135,7 +144,8 @@ sub write($$) {
     my $had_outbuff = 1 if $self->{outbuff};
     $self->{outbuff} .= $data;
 
-    my $nchars = syswrite( $self->{socket}, $self->{outbuff}, length( $self->{outbuff} ) );
+    my $nchars =
+      syswrite( $self->{socket}, $self->{outbuff}, length( $self->{outbuff} ) );
     if ( !defined($nchars) ) {
         return "" if $! == EAGAIN;
         $self->log_print( OSCAR_DBG_NOTICE, "Couldn't write to socket: $!" );
@@ -147,7 +157,12 @@ sub write($$) {
     my $wrote = substr( $self->{outbuff}, 0, $nchars, "" );
 
     if ( $self->{outbuff} ) {
-        $self->log_print( OSCAR_DBG_NOTICE, "Couldn't do complete write - had to buffer ", length( $self->{outbuff} ), " bytes." );
+        $self->log_print(
+            OSCAR_DBG_NOTICE,
+            "Couldn't do complete write - had to buffer ",
+            length( $self->{outbuff} ),
+            " bytes."
+        );
         $self->{state} = "readwrite";
         $self->{session}->callback_connection_changed( $self, "readwrite" );
         return 0;
@@ -157,7 +172,8 @@ sub write($$) {
         $self->{session}->callback_connection_changed( $self, "read" );
         return 1;
     }
-    $self->log_print_cond( OSCAR_DBG_PACKETS, sub { "Put '", hexdump($wrote), "'" } );
+    $self->log_print_cond( OSCAR_DBG_PACKETS,
+        sub { "Put '", hexdump($wrote), "'" } );
 
     return 1;
 }
@@ -168,7 +184,10 @@ sub flap_put($;$$) {
 
     $channel ||= FLAP_CHAN_SNAC;
 
-    return unless $self->{socket} and CORE::fileno( $self->{socket} ) and getpeername( $self->{socket} );    # and !$self->{socket}->error;
+    return
+          unless $self->{socket}
+      and CORE::fileno( $self->{socket} )
+      and getpeername( $self->{socket} );    # and !$self->{socket}->error;
 
     $msg = $self->flap_encode( $msg, $channel ) if $msg;
     $self->write($msg);
@@ -198,7 +217,8 @@ sub read($$;$) {
 
     if ( $readlen > 0 and $no_reread != 1 ) {
         my $buffer = "";
-        my $nchars = sysread( $self->{socket}, $buffer, $buffsize - length( ${ $self->{buffer} } ) );
+        my $nchars = sysread( $self->{socket}, $buffer,
+            $buffsize - length( ${ $self->{buffer} } ) );
         if ( ${ $self->{buffer} } ) {
             ${ $self->{buffer} } .= $buffer;
         }
@@ -208,7 +228,8 @@ sub read($$;$) {
 
         if ( !${ $self->{buffer} } and !defined($nchars) ) {
             return "" if $! == EAGAIN;
-            $self->log_print( OSCAR_DBG_NOTICE, "Couldn't read from socket: $!" );
+            $self->log_print( OSCAR_DBG_NOTICE,
+                "Couldn't read from socket: $!" );
             $self->{sockerr} = 1;
             $self->disconnect();
             return undef;
@@ -234,7 +255,8 @@ sub read($$;$) {
         else {
             $ret = \substr( ${ $self->{buffer} }, 0, $len, "" );
         }
-        $self->log_print_cond( OSCAR_DBG_PACKETS, sub { "Got '", hexdump($$ret), "'" } );
+        $self->log_print_cond( OSCAR_DBG_PACKETS,
+            sub { "Got '", hexdump($$ret), "'" } );
         return $$ret;
     }
 }
@@ -268,7 +290,8 @@ sub flap_get($;$) {
             return "";
         }
 
-        $self->log_print_cond( OSCAR_DBG_PACKETS, sub { "Got ", hexdump($data) } );
+        $self->log_print_cond( OSCAR_DBG_PACKETS,
+            sub { "Got ", hexdump($data) } );
         delete $self->{buff_gotflap};
         return $data;
     }
@@ -287,8 +310,11 @@ sub snac_encode($%) {
     $snac{flags2}  ||= 0;
     $snac{data}    ||= "";
     $snac{reqdata} ||= "";
-    $snac{reqid}   ||= ( $snac{subtype} << 16 ) | ( unpack( "n", randchars(2) ) )[0];
-    $self->{reqdata}->[ $snac{family} ]->{ pack( "N", $snac{reqid} ) } = $snac{reqdata} if $snac{reqdata};
+    $snac{reqid} ||=
+      ( $snac{subtype} << 16 ) | ( unpack( "n", randchars(2) ) )[0];
+    $self->{reqdata}->[ $snac{family} ]->{ pack( "N", $snac{reqid} ) } =
+      $snac{reqdata}
+      if $snac{reqdata};
 
     my $snac = protoparse( $self->{session}, "snac" )->pack(%snac);
     return $snac;
@@ -298,29 +324,36 @@ sub snac_put($%) {
     my ( $self, %snac ) = @_;
 
     if ( $snac{family} and !$self->{families}->{ $snac{family} } ) {
-        $self->log_printf( OSCAR_DBG_WARN, "Tried to send unsupported SNAC 0x%04X/0x%04X", $snac{family}, $snac{subtype} );
+        $self->log_printf( OSCAR_DBG_WARN,
+            "Tried to send unsupported SNAC 0x%04X/0x%04X",
+            $snac{family}, $snac{subtype} );
 
         my $newconn = $self->{session}->connection_for_family( $snac{family} );
         if ($newconn) {
             return $newconn->snac_put(%snac);
         }
         else {
-            $self->{session}->crapout( $self, "Couldn't find supported connection for SNAC 0x%04X/0x%04X", $snac{family}, $snac{subtype} );
+            $self->{session}->crapout( $self,
+                "Couldn't find supported connection for SNAC 0x%04X/0x%04X",
+                $snac{family}, $snac{subtype} );
         }
     }
     else {
         $snac{channel} ||= 0 + FLAP_CHAN_SNAC;
-        confess "No family/subtype" unless exists( $snac{family} ) and exists( $snac{subtype} );
+        confess "No family/subtype"
+          unless exists( $snac{family} )
+          and exists( $snac{subtype} );
 
-        if ( $self->{session}->{rate_manage_mode} != OSCAR_RATE_MANAGE_NONE and $self->{rate_limits} ) {
-            my $key = $self->{rate_limits}->{classmap}->{ pack( "nn", $snac{family}, $snac{subtype} ) };
+        if (    $self->{session}->{rate_manage_mode} != OSCAR_RATE_MANAGE_NONE
+            and $self->{rate_limits} )
+        {
+            my $key = $self->{rate_limits}->{classmap}
+              ->{ pack( "nn", $snac{family}, $snac{subtype} ) };
             if ($key) {
                 my $rinfo = $self->{rate_limits}->{$key};
                 if ($rinfo) {
-                    $rinfo->{current_state} = max(
-                        $rinfo->{max},
-                        $self->{session}->_compute_rate($rinfo)
-                    );
+                    $rinfo->{current_state} = max( $rinfo->{max},
+                        $self->{session}->_compute_rate($rinfo) );
                     $rinfo->{last_time} = millitime() - $rinfo->{time_offset};
                 }
             }
@@ -342,7 +375,8 @@ sub snac_decode($$) {
 
     if ( $data{flags1} & 0x80 ) {
         my ($minihdr_len) = unpack( "n", $data{data} );
-        $self->log_print( OSCAR_DBG_DEBUG, "Got miniheader of length $minihdr_len" );
+        $self->log_print( OSCAR_DBG_DEBUG,
+            "Got miniheader of length $minihdr_len" );
         substr( $data{data}, 0, 2 + $minihdr_len ) = "";
     }
 
@@ -377,11 +411,9 @@ sub set_blocking($$) {
     }
     else {
         # Cribbed from http://nntp.x.perl.org/group/perl.perl5.porters/42198
-        ioctl(
-            $self->{socket},
-            0x80000000 | ( 4 << 16 ) | ( ord('f') << 8 ) | 126,
-            $blocking
-        ) or warn "Couldn't set Win32 blocking: $!\n";
+        ioctl( $self->{socket},
+            0x80000000 | ( 4 << 16 ) | ( ord('f') << 8 ) | 126, $blocking )
+          or warn "Couldn't set Win32 blocking: $!\n";
     }
 
     return $self->{socket};
@@ -413,8 +445,12 @@ sub connect($$) {
 
     $self->log_print( OSCAR_DBG_NOTICE, "Connecting to $host:$port." );
     if ( defined( $self->{session}->{proxy_type} ) ) {
-        if ( $self->{session}->{proxy_type} eq "SOCKS4" or $self->{session}->{proxy_type} eq "SOCKS5" ) {
-            require Net::SOCKS or die "SOCKS proxying not available - couldn't load Net::SOCKS: $!\n";
+        if (   $self->{session}->{proxy_type} eq "SOCKS4"
+            or $self->{session}->{proxy_type} eq "SOCKS5" )
+        {
+            require Net::SOCKS
+              or die
+              "SOCKS proxying not available - couldn't load Net::SOCKS: $!\n";
 
             my $socksver;
             if ( $self->{session}->{proxy_type} eq "SOCKS4" ) {
@@ -429,23 +465,33 @@ sub connect($$) {
                 socks_port       => $self->{session}->{proxy_port} || 1080,
                 protocol_version => $socksver
             );
-            $socksargs{user_id}       = $self->{session}->{proxy_username} if exists( $self->{session}->{proxy_username} );
-            $socksargs{user_password} = $self->{session}->{proxy_password} if exists( $self->{session}->{proxy_password} );
-            $self->{socks}            = new Net::SOCKS(%socksargs) or return $self->{session}->crapout( $self, "Couldn't connect to SOCKS proxy: $@" );
+            $socksargs{user_id} = $self->{session}->{proxy_username}
+              if exists( $self->{session}->{proxy_username} );
+            $socksargs{user_password} = $self->{session}->{proxy_password}
+              if exists( $self->{session}->{proxy_password} );
+            $self->{socks} = new Net::SOCKS(%socksargs)
+              or return $self->{session}
+              ->crapout( $self, "Couldn't connect to SOCKS proxy: $@" );
 
-            $self->{socket} = $self->{socks}->connect( peer_addr => $host, peer_port => $port ) or return $self->{session}->crapout( {}, "Couldn't establish connection via SOCKS: $@\n" );
+            $self->{socket} =
+              $self->{socks}->connect( peer_addr => $host, peer_port => $port )
+              or return $self->{session}
+              ->crapout( {}, "Couldn't establish connection via SOCKS: $@\n" );
 
             $self->{ready}     = 0;
             $self->{connected} = 1;
             $self->set_blocking(0);
         }
-        elsif ( $self->{session}->{proxy_type} eq "HTTP" or $self->{session}->{proxy_type} eq "HTTPS" ) {
+        elsif ($self->{session}->{proxy_type} eq "HTTP"
+            or $self->{session}->{proxy_type} eq "HTTPS" )
+        {
 
             require MIME::Base64;
 
             my $authen = $self->{session}->{proxy_username};
-            $authen .= ":$self->{session}->{proxy_password}" if $self->{session}->{proxy_password};
-            $authen = encode_base64 $authen                  if $authen;
+            $authen .= ":$self->{session}->{proxy_password}"
+              if $self->{session}->{proxy_password};
+            $authen = encode_base64 $authen if $authen;
 
             my $request = "CONNECT $host:$port HTTP/1.1\r\n";
             $request .= "Proxy-Authorization: Basic $authen\r\n" if $authen;
@@ -453,55 +499,78 @@ sub connect($$) {
             $request .= "\r\n";
 
             $self->{socket} = gensym;
-            socket( $self->{socket}, PF_INET, SOCK_STREAM, getprotobyname('tcp') );
+            socket( $self->{socket}, PF_INET, SOCK_STREAM,
+                getprotobyname('tcp') );
             if ( $self->{session}->{local_ip} ) {
-                bind( $self->{socket}, sockaddr_in( 0, inet_aton( $self->{session}->{local_ip} ) ) ) or croak "Couldn't bind to desired IP: $!\n";
+                bind( $self->{socket},
+                    sockaddr_in( 0, inet_aton( $self->{session}->{local_ip} ) )
+                ) or croak "Couldn't bind to desired IP: $!\n";
             }
             $self->set_blocking(0);
 
-            my $addr = inet_aton( $self->{session}{proxy_host} ) or return $self->{session}->crapout( $self, "Couldn't resolve $self->{session}{proxy_host}." );
-            if ( !connect( $self->{socket}, sockaddr_in( $self->{session}{proxy_port}, $addr ) ) ) {
-                return $self->{session}->crapout( $self, "Couldn't connect to $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!" )
-                  unless $! == EINPROGRESS;
+            my $addr = inet_aton( $self->{session}{proxy_host} )
+              or return $self->{session}->crapout( $self,
+                "Couldn't resolve $self->{session}{proxy_host}." );
+            if (
+                !connect(
+                    $self->{socket},
+                    sockaddr_in( $self->{session}{proxy_port}, $addr )
+                )
+              )
+            {
+                return $self->{session}->crapout( $self,
+"Couldn't connect to $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!"
+                ) unless $! == EINPROGRESS;
             }
 
-            # TODO: I don't know what happens if authentication or connection fails
-            #
+         # TODO: I don't know what happens if authentication or connection fails
+         #
             my $buffer;
             syswrite( $self->{socket}, $request );
             sysread( $self->{socket}, $buffer, 1024 )
-              or return $self->{session}->crapout( $self, "Couldn't read from $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!" );
+              or return $self->{session}->crapout(
+                $self,
+"Couldn't read from $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!"
+              );
 
-            return $self->{session}->crapout( $self, "Couldn't connect to proxy: $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!" )
-              unless $buffer =~ /connection\s+established/i;
+            return $self->{session}->crapout( $self,
+"Couldn't connect to proxy: $self->{session}{proxy_host}:$self->{session}{proxy_port}: $!"
+            ) unless $buffer =~ /connection\s+established/i;
 
             $self->set_blocking(0);
             $self->{ready}     = 0;
             $self->{connected} = 1;
         }
         else {
-            die "Unknown proxy_type $self->{session}->{proxy_type} - valid types are SOCKS4, SOCKS5, HTTP, and HTTPS\n";
+            die
+"Unknown proxy_type $self->{session}->{proxy_type} - valid types are SOCKS4, SOCKS5, HTTP, and HTTPS\n";
         }
     }
     else {
         $self->{socket} = gensym;
         socket( $self->{socket}, PF_INET, SOCK_STREAM, getprotobyname('tcp') );
         if ( $self->{session}->{local_ip} ) {
-            bind( $self->{socket}, sockaddr_in( 0, inet_aton( $self->{session}->{local_ip} ) ) ) or croak "Couldn't bind to desired IP: $!\n";
+            bind( $self->{socket},
+                sockaddr_in( 0, inet_aton( $self->{session}->{local_ip} ) ) )
+              or croak "Couldn't bind to desired IP: $!\n";
         }
         $self->set_blocking(0);
 
-        my $addr = inet_aton($host) or return $self->{session}->crapout( $self, "Couldn't resolve $host." );
+        my $addr = inet_aton($host)
+          or
+          return $self->{session}->crapout( $self, "Couldn't resolve $host." );
         if ( !connect( $self->{socket}, sockaddr_in( $port, $addr ) ) ) {
             return 1 if $! == EINPROGRESS;
-            return $self->{session}->crapout( $self, "Couldn't connect to $host:$port: $!" );
+            return $self->{session}
+              ->crapout( $self, "Couldn't connect to $host:$port: $!" );
         }
 
         $self->{ready}     = 0;
         $self->{connected} = 0;
     }
 
-    binmode( $self->{socket} ) or return $self->{session}->crapout( $self, "Couldn't set binmode: $!" );
+    binmode( $self->{socket} )
+      or return $self->{session}->crapout( $self, "Couldn't set binmode: $!" );
     return 1;
 }
 
@@ -520,18 +589,27 @@ sub listen($$) {
         $self->{socket} = gensym;
         socket( $self->{socket}, PF_INET, SOCK_STREAM, getprotobyname('tcp') );
 
-        setsockopt( $self->{socket}, SOL_SOCKET, SO_REUSEADDR, pack( "l", 1 ) ) or return $self->{session}->crapout( $self, "Couldn't set listen socket options: $!" );
+        setsockopt( $self->{socket}, SOL_SOCKET, SO_REUSEADDR, pack( "l", 1 ) )
+          or return $self->{session}
+          ->crapout( $self, "Couldn't set listen socket options: $!" );
 
-        my $sockaddr = sockaddr_in( $self->{session}->{local_port} || $port || 0, inet_aton( $self->{session}->{local_ip} || 0 ) );
-        bind( $self->{socket}, $sockaddr ) or return $self->{session}->crapout("Couldn't bind to desired IP: $!");
+        my $sockaddr = sockaddr_in(
+            $self->{session}->{local_port} || $port || 0,
+            inet_aton( $self->{session}->{local_ip} || 0 )
+        );
+        bind( $self->{socket}, $sockaddr )
+          or
+          return $self->{session}->crapout("Couldn't bind to desired IP: $!");
         $self->set_blocking(0);
-        listen( $self->{socket}, SOMAXCONN ) or return $self->{session}->crapout("Couldn't listen: $!");
+        listen( $self->{socket}, SOMAXCONN )
+          or return $self->{session}->crapout("Couldn't listen: $!");
 
         $self->{state} = "read";
         $self->{rv}->{ft_state} = "listening";
     }
 
-    binmode( $self->{socket} ) or return $self->{session}->crapout("Couldn't set binmode: $!");
+    binmode( $self->{socket} )
+      or return $self->{session}->crapout("Couldn't set binmode: $!");
     return 1;
 }
 
@@ -567,15 +645,18 @@ sub process_one($;$$$) {
             $self->log_print( OSCAR_DBG_NOTICE, "Couldn't connect." );
             return 0;
         }
-        else {
-            $self->log_print( OSCAR_DBG_DEBUG, "Got connack." );
-        }
+        return 0
+          if $flap eq ""
+          ; # didn't get the full header yet, so we'll try again the next go-around
 
-        return $self->{session}->crapout( $self, "Got bad connack from server" ) unless $self->{channel} == FLAP_CHAN_NEWCONN;
+        return $self->{session}->crapout( $self, "Got bad connack from server" )
+          unless $self->{channel} == FLAP_CHAN_NEWCONN;
 
         if ( $self->{conntype} == CONNTYPE_LOGIN ) {
-            $self->log_print( OSCAR_DBG_DEBUG, "Got connack.  Sending connack." );
-            $self->flap_put( pack( "N", 1 ), FLAP_CHAN_NEWCONN ) unless $self->{session}->{svcdata}->{hashlogin};
+            $self->log_print( OSCAR_DBG_DEBUG,
+                "Got connack.  Sending connack." );
+            $self->flap_put( pack( "N", 1 ), FLAP_CHAN_NEWCONN )
+              unless $self->{session}->{svcdata}->{hashlogin};
             $self->log_print( OSCAR_DBG_SIGNON, "Connected to login server." );
             $self->{ready}    = 1;
             $self->{families} = { 23 => 1 };
@@ -583,23 +664,27 @@ sub process_one($;$$$) {
             if ( !$self->{session}->{svcdata}->{hashlogin} ) {
                 $self->proto_send(
                     protobit  => "initial_signon_request",
-                    protodata => { screenname => $self->{session}->{screenname} },
-                    nopause   => 1
+                    protodata =>
+                      { screenname => $self->{session}->{screenname} },
+                    nopause => 1
                 );
             }
             else {
                 $self->proto_send(
                     protobit  => "ICQ_signon_request",
-                    protodata => { signon_tlv( $self->{session}, delete( $self->{auth} ) ) },
-                    nopause   => 1
+                    protodata => {
+                        signon_tlv( $self->{session}, delete( $self->{auth} ) )
+                    },
+                    nopause => 1
                 );
             }
         }
         else {
             $self->log_print( OSCAR_DBG_NOTICE, "Sending BOS-Signon." );
             $self->proto_send(
-                protobit  => "BOS_signon",
-                reqid     => 0x01000000 | ( unpack( "n", substr( $self->{auth}, 0, 2 ) ) )[0],
+                protobit => "BOS_signon",
+                reqid    => 0x01000000 |
+                  ( unpack( "n", substr( $self->{auth}, 0, 2 ) ) )[0],
                 protodata => { cookie => substr( delete( $self->{auth} ), 2 ) },
                 nopause   => 1
             );
@@ -616,7 +701,8 @@ sub process_one($;$$$) {
             }
             else {
                 my $data = $self->flap_get($no_reread) or return 0;
-                $snac = { data => $data, reqid => 0, family => 0x17, subtype => 0x3 };
+                $snac =
+                  { data => $data, reqid => 0, family => 0x17, subtype => 0x3 };
                 if ( $self->{channel} == FLAP_CHAN_CLOSE ) {
                     $self->{conntype} = CONNTYPE_LOGIN;
                     $self->{family}   = 0x17;

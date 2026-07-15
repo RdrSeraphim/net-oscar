@@ -38,14 +38,18 @@ sub millitime() {
 sub randchars($) {
     my $count  = shift;
     my $retval = "";
-    for ( my $i = 0; $i < $count; $i++ ) { $retval .= chr( int( rand(256) ) ); }
+    for ( my $i = 0 ; $i < $count ; $i++ ) {
+        $retval .= chr( int( rand(256) ) );
+    }
     return $retval;
 }
 
 sub log_print($$@) {
     my ( $obj, $level ) = ( shift, shift );
     my $session = exists( $obj->{session} ) ? $obj->{session} : $obj;
-    return unless defined( $session->{LOGLEVEL} ) and $session->{LOGLEVEL} >= $level;
+    return
+      unless defined( $session->{LOGLEVEL} )
+      and $session->{LOGLEVEL} >= $level;
 
     my $message = "";
     $message .= $obj->{description} . ": " if $obj->{description};
@@ -55,7 +59,8 @@ sub log_print($$@) {
         $session->callback_log( $level, $message );
     }
     else {
-        $message = "(" . $session->{screenname} . ") $message" if $session->{SNDEBUG};
+        $message = "(" . $session->{screenname} . ") $message"
+          if $session->{SNDEBUG};
         print STDERR $message;
     }
 }
@@ -69,7 +74,9 @@ sub log_printf($$@) {
 sub log_printf_cond($$&) {
     my ( $obj, $level, $sub ) = @_;
     my $session = exists( $obj->{session} ) ? $obj->{session} : $obj;
-    return unless defined( $session->{LOGLEVEL} ) and $session->{LOGLEVEL} >= $level;
+    return
+      unless defined( $session->{LOGLEVEL} )
+      and $session->{LOGLEVEL} >= $level;
 
     log_printf( $obj, $level, &$sub );
 }
@@ -77,7 +84,9 @@ sub log_printf_cond($$&) {
 sub log_print_cond($$&) {
     my ( $obj, $level, $sub ) = @_;
     my $session = exists( $obj->{session} ) ? $obj->{session} : $obj;
-    return unless defined( $session->{LOGLEVEL} ) and $session->{LOGLEVEL} >= $level;
+    return
+      unless defined( $session->{LOGLEVEL} )
+      and $session->{LOGLEVEL} >= $level;
 
     log_print( $obj, $level, &$sub );
 }
@@ -89,11 +98,13 @@ sub hexdump($;$) {
     my @stuff;
 
     return "" unless defined($stuff);
-    for ( my $i = 0; $i < length($stuff); $i++ ) {
+    for ( my $i = 0 ; $i < length($stuff) ; $i++ ) {
         push @stuff, substr( $stuff, $i, 1 );
     }
 
-    return $stuff unless $forcehex or grep { $_ lt chr(0x20) or $_ gt chr(0x7E) } @stuff;
+    return $stuff
+      unless $forcehex
+      or grep { $_ lt chr(0x20) or $_ gt chr(0x7E) } @stuff;
     while (@stuff) {
         my $i = 0;
         $retbuff .= "\n\t";
@@ -105,7 +116,7 @@ sub hexdump($;$) {
             $retbuff .= sprintf "%02X ", ord($currstuff);
             $i++;
         }
-        for ( ; $i < 16; $i++ ) {
+        for ( ; $i < 16 ; $i++ ) {
             $retbuff .= " " unless $i % 4;
             $retbuff .= " " unless $i % 8;
             $retbuff .= "   ";
@@ -211,7 +222,8 @@ sub signon_tlv($;$$) {
     else {
         if ( $session->{auth_response} ) {
             $protodata{auth_response}  = delete $session->{auth_response};
-            $protodata{pass_is_hashed} = "" if delete $session->{pass_is_hashed};
+            $protodata{pass_is_hashed} = ""
+              if delete $session->{pass_is_hashed};
         }
         else {
             # As of AIM 5.5, the password can be MD5'd before
@@ -223,9 +235,11 @@ sub signon_tlv($;$$) {
             # our auth_challenge/auth_response API.
 
             $protodata{pass_is_hashed} = "";
-            my $hashpass = $session->{pass_is_hashed} ? $password : md5($password);
+            my $hashpass =
+              $session->{pass_is_hashed} ? $password : md5($password);
 
-            $protodata{auth_response} = encode_password( $session, $hashpass, $key );
+            $protodata{auth_response} =
+              encode_password( $session, $hashpass, $key );
         }
     }
 
@@ -243,7 +257,7 @@ sub encode_password($$;$) {
         $md5->add("AOL Instant Messenger (SM)");
         return $md5->digest();
     }
-    else {                                        # Use old roasting method.  Courtesy of SDiZ Cheng.
+    else {    # Use old roasting method.  Courtesy of SDiZ Cheng.
         my $ret  = "";
         my @pass = map { ord($_) } split( //, $password );
 
@@ -251,7 +265,7 @@ sub encode_password($$;$) {
           F3 26 81 C4 39 86 DB 92 71 A3 B9 E6 53 7A 95 7C
         );
 
-        for ( my $i = 0; $i < length($password); $i++ ) {
+        for ( my $i = 0 ; $i < length($password) ; $i++ ) {
             $ret .= chr( $pass[$i] ^ $encoding_table[$i] );
         }
 
@@ -268,7 +282,10 @@ sub send_versions($$;$) {
         @services = ( 1, $conntype );
     }
     else {
-        @services = sort { $b <=> $a } grep { not OSCAR_TOOLDATA()->{$_}->{nobos} } keys %{ OSCAR_TOOLDATA() };
+        @services =
+          sort { $b <=> $a }
+          grep { not OSCAR_TOOLDATA()->{$_}->{nobos} }
+          keys %{ OSCAR_TOOLDATA() };
     }
 
     my %protodata = ( service => [] );
@@ -286,13 +303,25 @@ sub send_versions($$;$) {
     }
 
     if ($send_tools) {
-        $connection->proto_send( protobit => "set_tool_versions", protodata => \%protodata, nopause => 1 );
+        $connection->proto_send(
+            protobit  => "set_tool_versions",
+            protodata => \%protodata,
+            nopause   => 1
+        );
     }
     elsif ($server) {
-        $connection->proto_send( protobit => "host_versions", protodata => \%protodata, nopause => 1 );
+        $connection->proto_send(
+            protobit  => "host_versions",
+            protodata => \%protodata,
+            nopause   => 1
+        );
     }
     else {
-        $connection->proto_send( protobit => "set_service_versions", protodata => \%protodata, nopause => 1 );
+        $connection->proto_send(
+            protobit  => "set_service_versions",
+            protodata => \%protodata,
+            nopause   => 1
+        );
     }
 }
 

@@ -2,6 +2,9 @@ Revision history for Perl extension Net::OSCAR.
 
 {{$NEXT}}
 
+1.929     2026-07-14 22:27:00 America/Detroit
+  - Fix bug where FLAP connection header was being read too soon.
+
 1.928     2010-10-07 09:33:56 America/Chicago
   - Tests Clean. Bumping version to release
 

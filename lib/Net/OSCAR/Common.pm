@@ -82,7 +82,8 @@ require Exporter;
         )
     ]
 );
-$EXPORT_TAGS{all} = [ @{ $EXPORT_TAGS{standard} }, @{ $EXPORT_TAGS{loglevels} } ];
+$EXPORT_TAGS{all} =
+  [ @{ $EXPORT_TAGS{standard} }, @{ $EXPORT_TAGS{loglevels} } ];
 @EXPORT_OK = @{ $EXPORT_TAGS{all} };
 
 # Log levels
@@ -116,16 +117,22 @@ use constant ADMIN_TYPE_SCREENNAME_FORMAT => dualvar( 3, "screenname format" );
 use constant ADMIN_TYPE_ACCOUNT_CONFIRM   => dualvar( 4, "account confirm" );
 
 # Adminsitrative responses
-use constant ADMIN_ERROR_UNKNOWN    => dualvar( 0, "unknown error" );
-use constant ADMIN_ERROR_BADPASS    => dualvar( 1, "incorrect password" );
-use constant ADMIN_ERROR_BADINPUT   => dualvar( 2, "invalid input" );
-use constant ADMIN_ERROR_BADLENGTH  => dualvar( 3, "screenname/email/password is too long or too short" );
-use constant ADMIN_ERROR_TRYLATER   => dualvar( 4, "request could not be processed; wait a few minutes and try again" );
+use constant ADMIN_ERROR_UNKNOWN  => dualvar( 0, "unknown error" );
+use constant ADMIN_ERROR_BADPASS  => dualvar( 1, "incorrect password" );
+use constant ADMIN_ERROR_BADINPUT => dualvar( 2, "invalid input" );
+use constant ADMIN_ERROR_BADLENGTH =>
+  dualvar( 3, "screenname/email/password is too long or too short" );
+use constant ADMIN_ERROR_TRYLATER => dualvar( 4,
+    "request could not be processed; wait a few minutes and try again" );
 use constant ADMIN_ERROR_REQPENDING => dualvar( 5, "request pending" );
-use constant ADMIN_ERROR_CONNREF    => dualvar( 6, "couldn't connect to the admin server" );
-use constant ADMIN_ERROR_DIFFSN     => dualvar( 7, "the new screenname is not equivalent to the old screenname" );
-use constant ADMIN_ERROR_EMAILLIM   => dualvar( 8, "the email address has too many screennames" );
-use constant ADMIN_ERROR_EMAILBAD   => dualvar( 9, "the email address is invalid" );
+use constant ADMIN_ERROR_CONNREF =>
+  dualvar( 6, "couldn't connect to the admin server" );
+use constant ADMIN_ERROR_DIFFSN =>
+  dualvar( 7, "the new screenname is not equivalent to the old screenname" );
+use constant ADMIN_ERROR_EMAILLIM =>
+  dualvar( 8, "the email address has too many screennames" );
+use constant ADMIN_ERROR_EMAILBAD =>
+  dualvar( 9, "the email address is invalid" );
 
 # Direct connect types
 use constant OSCAR_DIRECT_IM        => dualvar( 1, "direct IM" );

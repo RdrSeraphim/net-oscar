@@ -33,7 +33,9 @@ use overload
   "bool" => "boolify";
 
 sub new($$) {
-    return $_[1] if ref( $_[0] ) or UNIVERSAL::isa( $_[1], "Net::OSCAR::Screenname" );
+    return $_[1]
+      if ref( $_[0] )
+      or UNIVERSAL::isa( $_[1], "Net::OSCAR::Screenname" );
     my $class = ref( $_[0] ) || $_[0] || "Net::OSCAR::Screenname";
     shift;
     my $name = $_[0];

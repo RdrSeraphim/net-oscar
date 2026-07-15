@@ -83,13 +83,16 @@ sub load_xml(;$) {
             $xmlfile = "$_/Net/OSCAR/XML/Protocol.xml";
             last;
         }
-        croak "Couldn't find Net/OSCAR/XML/Protocol.xml in search path: " . join( " ", @INC ) unless $xmlfile;
+        croak "Couldn't find Net/OSCAR/XML/Protocol.xml in search path: "
+          . join( " ", @INC )
+          unless $xmlfile;
     }
 
     open( XMLFILE, $xmlfile ) or croak "Couldn't open $xmlfile: $!";
     my $xml = join( "", <XMLFILE> );
     close XMLFILE;
-    my $xmlparse = $xmlparser->parse($xml) or croak "Couldn't parse XML from $xmlfile: $@";
+    my $xmlparse = $xmlparser->parse($xml)
+      or croak "Couldn't parse XML from $xmlfile: $@";
 
     parse_xml($xmlparse);
 }
@@ -106,9 +109,11 @@ sub add_xml_data($) {
 
         my %protobit = ( xml => $value );
         my %attrs    = %{ $value->[0] };
-        $protobit{$_}                                      = $attrs{$_} foreach keys %attrs;
-        $xml_revmap{ $attrs{family} }->{ $attrs{subtype} } = $attrs{name} if exists( $attrs{family} ) and exists( $attrs{subtype} );
-        $xmlmap{ $attrs{name} }                            = \%protobit;
+        $protobit{$_} = $attrs{$_} foreach keys %attrs;
+        $xml_revmap{ $attrs{family} }->{ $attrs{subtype} } = $attrs{name}
+          if exists( $attrs{family} )
+          and exists( $attrs{subtype} );
+        $xmlmap{ $attrs{name} } = \%protobit;
     }
 }
 
@@ -118,7 +123,7 @@ sub parse_xml($) {
     %xmlmap     = ();
     %xml_revmap = ();
 
-    # We set the autovivification so that keys of xml_revmap are Net::OSCAR::TLV hashrefs.
+# We set the autovivification so that keys of xml_revmap are Net::OSCAR::TLV hashrefs.
     if ( !tied(%xml_revmap) ) {
         tie %xml_revmap, "Net::OSCAR::TLV", 'tie %$value, ref($self)';
     }
@@ -192,12 +197,15 @@ sub _xmlnode_to_template($$) {
 
     my $datum = {};
     $datum->{name}  = $attrs->{name} if $attrs->{name};
-    $datum->{value} = ""             if $attrs->{default_generate} and $attrs->{default_generate} ne "no";
-    $datum->{value} = $value->[1]    if @$value                    and $value->[1] =~ /\S/;
+    $datum->{value} = ""
+      if $attrs->{default_generate} and $attrs->{default_generate} ne "no";
+    $datum->{value} = $value->[1] if @$value and $value->[1] =~ /\S/;
 
     $datum->{count} = $attrs->{count} if $attrs->{count};
     if ( $attrs->{count_prefix} || $attrs->{length_prefix} ) {
-        my ( $packlet, $len ) = _num_to_packlen( $attrs->{count_prefix} || $attrs->{length_prefix}, $attrs->{prefix_order} );
+        my ( $packlet, $len ) =
+          _num_to_packlen( $attrs->{count_prefix} || $attrs->{length_prefix},
+            $attrs->{prefix_order} );
         $datum->{prefix_packlet} = $packlet;
         $datum->{prefix_len}     = $len;
         $datum->{prefix}         = $attrs->{count_prefix} ? "count" : "length";
@@ -206,7 +214,11 @@ sub _xmlnode_to_template($$) {
     if ( $tag eq "ref" ) {
         $datum->{type} = "ref";
     }
-    elsif ( $tag eq "byte" or $tag eq "word" or $tag eq "dword" or $tag eq "enum" ) {
+    elsif ($tag eq "byte"
+        or $tag eq "word"
+        or $tag eq "dword"
+        or $tag eq "enum" )
+    {
         $datum->{type} = "num";
 
         my $enum = 0;
@@ -228,7 +240,8 @@ sub _xmlnode_to_template($$) {
                 next if $subtag eq "0";
 
                 my $attrs = shift @$subval;
-                my ( $name, $value, $default ) = ( $attrs->{name}, $attrs->{value}, $attrs->{default} );
+                my ( $name, $value, $default ) =
+                  ( $attrs->{name}, $attrs->{value}, $attrs->{default} );
                 $datum->{enum_byname}->{$name} = $value;
                 $datum->{enum_byval}->{$value} = $name;
                 $datum->{value}                = $value if $default;
@@ -242,7 +255,8 @@ sub _xmlnode_to_template($$) {
         $datum->{type}            = "data";
         $datum->{len}             = $attrs->{length} if $attrs->{length};
         $datum->{pad}             = $attrs->{pad}    if exists( $attrs->{pad} );
-        $datum->{null_terminated} = 1                if $attrs->{null_terminated} and $attrs->{null_terminated} eq "yes";
+        $datum->{null_terminated} = 1
+          if $attrs->{null_terminated} and $attrs->{null_terminated} eq "yes";
 
         while (@$value) {
             my ( $subtag, $subval ) = splice( @$value, 0, 2 );
@@ -259,7 +273,8 @@ sub _xmlnode_to_template($$) {
     elsif ( $tag eq "tlvchain" ) {
         $datum->{type}     = "tlvchain";
         $datum->{len}      = $attrs->{length} if $attrs->{length};
-        $datum->{subtyped} = 1                if $attrs->{subtyped} and $attrs->{subtyped} eq "yes";
+        $datum->{subtyped} = 1
+          if $attrs->{subtyped} and $attrs->{subtyped} eq "yes";
 
         my ( $subtag, $subval );
 
@@ -274,8 +289,10 @@ sub _xmlnode_to_template($$) {
             $item->{num}     = $tlvattrs->{type};
             $item->{subtype} = $tlvattrs->{subtype} if $tlvattrs->{subtype};
             $item->{count}   = $tlvattrs->{count}   if $tlvattrs->{count};
-            $item->{value}   = ""                   if $tlvattrs->{default_generate} and $tlvattrs->{default_generate} ne "no";
-            $item->{items}   = [];
+            $item->{value}   = ""
+              if $tlvattrs->{default_generate}
+              and $tlvattrs->{default_generate} ne "no";
+            $item->{items} = [];
 
             while (@$tlvval) {
                 my ( $subtag, $subval ) = splice( @$tlvval, 0, 2 );
@@ -296,9 +313,11 @@ our (%PROTOCACHE);
 
 sub protoparse($$) {
     my ( $oscar, $wanted ) = @_;
-    return $PROTOCACHE{$wanted}->set_oscar($oscar) if exists( $PROTOCACHE{$wanted} );
+    return $PROTOCACHE{$wanted}->set_oscar($oscar)
+      if exists( $PROTOCACHE{$wanted} );
 
-    my $xml = $xmlmap{$wanted}->{xml} or croak "Couldn't find requested protocol element '$wanted'.";
+    my $xml = $xmlmap{$wanted}->{xml}
+      or croak "Couldn't find requested protocol element '$wanted'.";
 
     confess "No oscar!" unless $oscar;
 
@@ -332,7 +351,9 @@ sub protobit_to_snac($) {
 # Map a SNAC (family => foo, subtype => bar) to "protobit" (XML <define name="foo">)
 sub snac_to_protobit(%) {
     my (%snac) = @_;
-    if ( $xml_revmap{ $snac{family} } and $xml_revmap{ $snac{family} }->{ $snac{subtype} } ) {
+    if (    $xml_revmap{ $snac{family} }
+        and $xml_revmap{ $snac{family} }->{ $snac{subtype} } )
+    {
         return $xml_revmap{ $snac{family} }->{ $snac{subtype} };
     }
     elsif ( $xml_revmap{'-1'} and $xml_revmap{'-1'}->{ $snac{subtype} } ) {

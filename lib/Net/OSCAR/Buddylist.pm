@@ -59,29 +59,32 @@ sub STORE {
     my ( $self, $key, $value ) = @_;
     if ( exists $self->{DATA}->{ $self->{nonorm} ? $key : normalize($key) } ) {
         my $foo = 0;
-        for ( my $i = 0; $i < scalar @{ $self->{ORDERFORM} }; $i++ ) {
+        for ( my $i = 0 ; $i < scalar @{ $self->{ORDERFORM} } ; $i++ ) {
             next unless $key eq $self->{ORDERFORM}->[$i];
             $foo = 1;
-            $self->{ORDERFORM}->[$i] = $self->{nonorm} ? $key : Net::OSCAR::Screenname->new($key);
+            $self->{ORDERFORM}->[$i] =
+              $self->{nonorm} ? $key : Net::OSCAR::Screenname->new($key);
             last;
         }
     }
     else {
-        push @{ $self->{ORDERFORM} }, $self->{nonorm} ? $key : Net::OSCAR::Screenname->new($key);
+        push @{ $self->{ORDERFORM} },
+          $self->{nonorm} ? $key : Net::OSCAR::Screenname->new($key);
     }
     $self->{DATA}->{ $self->{nonorm} ? $key : normalize($key) } = $value;
 }
 
 sub DELETE {
     my ( $self, $key ) = @_;
-    my $retval = delete $self->{DATA}->{ $self->{nonorm} ? $key : normalize($key) };
-    my $foo    = 0;
-    for ( my $i = 0; $i < scalar @{ $self->{ORDERFORM} }; $i++ ) {
+    my $retval =
+      delete $self->{DATA}->{ $self->{nonorm} ? $key : normalize($key) };
+    my $foo = 0;
+    for ( my $i = 0 ; $i < scalar @{ $self->{ORDERFORM} } ; $i++ ) {
         next unless $key eq $self->{ORDERFORM}->[$i];
         $foo = 1;
         splice( @{ $self->{ORDERFORM} }, $i, 1 );
 
-        # What if the user deletes a key while iterating?  We need to correct for the new index.
+# What if the user deletes a key while iterating?  We need to correct for the new index.
         if ( $self->{CURRKEY} != -1 and $i <= $self->{CURRKEY} ) {
             $self->{CURRKEY}--;
         }

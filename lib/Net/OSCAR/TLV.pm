@@ -65,24 +65,25 @@ sub STORE {
     my ( $self, $key, $value ) = @_;
     my ($normalkey) = pack( "n", 0 + $key );
 
-    #print STDERR "Storing: ", Data::Dumper->Dump([$value], ["${self}->{$key}"]);
+   #print STDERR "Storing: ", Data::Dumper->Dump([$value], ["${self}->{$key}"]);
     if ( !exists $self->{DATA}->{$normalkey} ) {
         if (    $self->{AUTOVIVIFY}
             and ref($value) eq "HASH"
             and !tied(%$value)
-            and scalar keys %$value == 0 ) {
+            and scalar keys %$value == 0 )
+        {
 
             #print STDERR "Autovivifying $key: $self->{AUTOVIVIFY}\n";
             eval $self->{AUTOVIVIFY};
 
-            #print STDERR "New value: ", Data::Dumper->Dump([$self->{DATA}->{$normalkey}], ["${self}->{$key}"]);
+#print STDERR "New value: ", Data::Dumper->Dump([$self->{DATA}->{$normalkey}], ["${self}->{$key}"]);
         }
         else {
-            #print STDERR "Not autovivifying $key.\n";
-            #print STDERR "No autovivify.\n" unless $self->{AUTOVIVIFY};
-            #printf STDERR "ref(\$value) eq %s\n", ref($value) unless ref($value) eq "HASH";
-            #print STDERR "tied(\%\$value)\n" unless !tied(%$value);
-            #printf STDERR "scalar keys \%\$value == %d\n", scalar keys %$value unless scalar keys %$value == 0;
+#print STDERR "Not autovivifying $key.\n";
+#print STDERR "No autovivify.\n" unless $self->{AUTOVIVIFY};
+#printf STDERR "ref(\$value) eq %s\n", ref($value) unless ref($value) eq "HASH";
+#print STDERR "tied(\%\$value)\n" unless !tied(%$value);
+#printf STDERR "scalar keys \%\$value == %d\n", scalar keys %$value unless scalar keys %$value == 0;
         }
         push @{ $self->{ORDER} }, $normalkey;
     }
@@ -97,11 +98,11 @@ sub DELETE {
     my ( $self, $key ) = @_;
     my ($packedkey) = pack( "n", 0 + $key );
     delete $self->{DATA}->{$packedkey};
-    for ( my $i = 0; $i < scalar @{ $self->{ORDER} }; $i++ ) {
+    for ( my $i = 0 ; $i < scalar @{ $self->{ORDER} } ; $i++ ) {
         next unless $packedkey eq $self->{ORDER}->[$i];
         splice( @{ $self->{ORDER} }, $i, 1 );
 
-        # What if the user deletes a key while iterating?  We need to correct for the new index.
+# What if the user deletes a key while iterating?  We need to correct for the new index.
         if ( $self->{CURRKEY} != -1 and $i <= $self->{CURRKEY} ) {
             $self->{CURRKEY}--;
         }
